@@ -1,0 +1,222 @@
+import os
+import logging
+import asyncio
+from typing import List, Dict, Optional, Union, Any
+from enum import Enum
+import fal_client  # Requirement: pip install fal-client
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+class SonautoModel(str, Enum):
+    """Canonical Fal.ai model endpoints for Sonauto V2."""
+    TEXT_TO_MUSIC = "sonauto/v2/text-to-music"
+    INPAINT = "sonauto/v2/inpaint"
+    EXTEND = "sonauto/v2/extend"
+
+class SonautoOperator:
+    """
+    Neo-Apex Sonauto Operator
+    
+    A hardened interface for the Sonauto V2 generative engine hosted on fal.ai.
+    This class enforces strict typing, payload validation, and comprehensive tag taxonomy
+    to prevent 'Junior Developer' errors (e.g., malformed payloads, infinite loops).
+    
+    Architectural Changes:
+    - Replaced `api.sonauto.ai/v1` with `fal_client` (V2/V2.2 Model).
+    - Implemented `TAXONOMY` as a strict validation layer.
+    - Added 'Shadow Ledger' cost estimation logic.
+    """
+
+    # Estimated cost per request in USD (for internal tracking)
+    COST_PER_GENERATION = 0.075
+
+    # Comprehensive Taxonomy derived from Sonauto V2 Tag Explorer
+    # Organized hierarchically to assist with prompt engineering
+    TAXONOMY = {
+        'genre_core': [
+            'pop', 'rock', 'electronic', 'hip hop', 'rap', 'jazz', 'metal', 
+            'country', 'blues', 'folk', 'r&b', 'soul', 'funk', 'classical',
+            'reggae', 'disco', 'latin', 'world', 'gospel'
+        ],
+        'subgenre':,
+        'era': [
+            '1960s', '1970s', '1980s', '1990s', '2000s', '2010s', '2020s',
+            'vintage', 'modern', 'futuristic', 'old school', 'retro'
+        ],
+        'mood': [
+            'energetic', 'aggressive', 'chill', 'dark', 'emotional', 'happy',
+            'melancholic', 'romantic', 'uplifting', 'sad', 'triumphant',
+            'ethereal', 'atmospheric', 'lo-fi', 'cinematic'
+        ],
+        'instrumentation': [
+            'piano', 'guitar', 'electric guitar', 'acoustic guitar', 'synthesizer',
+            'drums', '808', 'bass', 'strings', 'violin', 'cello', 'brass',
+            'saxophone', 'orchestral'
+        ],
+        'vocals': [
+            'male vocalist', 'female vocalist', 'duet', 'choir', 'backing vocals',
+            'instrumental', 'autotune', 'acapella'
+        ]
+    }
+
+    # Flattened set for O(1) validation lookups
+    _VALID_TAGS = {tag for category in TAXONOMY.values() for tag in category}
+
+    def __init__(self, api_key: Optional[str] = None):
+        """
+        Initialize the operator. 
+        Note: fal_client automatically checks FAL_KEY env var, but specific key 
+        injection is supported for rotation/security.
+        """
+        if api_key:
+            os.environ = api_key
+        
+        if not os.getenv("FAL_KEY"):
+            raise ValueError("Authentication Error: FAL_KEY environment variable is missing.")
+
+    def validate_tags(self, tags: List[str]) -> List[str]:
+        """
+        Validates tags against the V2 taxonomy. 
+        Returns a list of valid tags, logging warnings for invalid ones.
+        """
+        valid_tags =
+        for tag in tags:
+            normalized_tag = tag.lower().strip()
+            if normalized_tag in self._VALID_TAGS:
+                valid_tags.append(normalized_tag)
+            else:
+                logger.warning(f"Tag Warning: '{tag}' is not in the official V2 taxonomy. It may be ignored by the model.")
+                # We still allow it as V2 supports open vocabulary, but we warn.
+                valid_tags.append(normalized_tag)
+        return valid_tags
+
+    async def generate_music(
+        self,
+        prompt: str,
+        tags: List[str],
+        lyrics: Optional[str] = None,
+        bpm: Union[int, str] = "auto",
+        prompt_strength: float = 2.0,
+        balance_strength: float = 0.7,
+        num_songs: int = 1,
+        seed: Optional[int] = None,
+        webhook_url: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Submits a generation job to the Sonauto V2 engine.
+
+        Args:
+            prompt: Description of the song.
+            tags: List of style tags (validated against TAXONOMY).
+            lyrics: Optional custom lyrics. If None, model generates them.
+            bpm: Beats per minute (int) or "auto".
+            prompt_strength: CFG Scale. Higher (2.5+) = strict adherence, Lower (1.5) = creative.
+            balance_strength: Vocal/Inst balance. 0.7 is recommended default.
+            num_songs: 1 or 2. (Note: 2 songs costs 1.5x).
+            seed: Integer for deterministic generation.
+            webhook_url: URL for async callback (Recommended for production).
+
+        Returns:
+            JSON response containing 'request_id' (if webhook) or 'audio' data (if polling).
+        """
+        # 1. Validation Logic
+        if num_songs not in [1, 2]:
+            raise ValueError("API Restriction: num_songs must be 1 or 2.")
+        
+        valid_tags = self.validate_tags(tags)
+        
+        # 2. Payload Construction
+        arguments = {
+            "prompt": prompt,
+            "tags": valid_tags,
+            "bpm": bpm,
+            "prompt_strength": prompt_strength,
+            "balance_strength": balance_strength,
+            "num_songs": num_songs
+        }
+
+        if lyrics:
+            arguments["lyrics_prompt"] = lyrics
+        if seed is not None:
+            arguments["seed"] = seed
+
+        # 3. Submission Strategy
+        try:
+            if webhook_url:
+                # Async Webhook Pattern (Production)
+                logger.info(f"Submitting job to queue with webhook: {webhook_url}")
+                response = await fal_client.submit_async(
+                    SonautoModel.TEXT_TO_MUSIC,
+                    arguments=arguments,
+                    webhook_url=webhook_url
+                )
+                # In async mode, we return the request handle/ID immediately
+                return {
+                    "status": "queued",
+                    "request_id": response.request_id,
+                    "estimated_cost": self.COST_PER_GENERATION * (1.5 if num_songs == 2 else 1.0)
+                }
+            else:
+                # Sync/Polling Pattern (Development/Testing)
+                logger.info("Submitting job via polling (Wait time approx 60s)...")
+                result = await fal_client.subscribe_async(
+                    SonautoModel.TEXT_TO_MUSIC,
+                    arguments=arguments,
+                    with_logs=True
+                )
+                return result
+
+        except Exception as e:
+            logger.error(f"Fal.ai Inference Failed: {str(e)}")
+            raise
+
+    async def inpaint_section(
+        self,
+        audio_url: str,
+        start_sec: float,
+        end_sec: float,
+        prompt: str,
+        tags: List[str],
+        lyrics: str
+    ) -> Dict[str, Any]:
+        """
+        Inpaints a specific section of an existing song.
+        
+        CRITICAL: Inpainting requires *both* lyrics and tags to be present.
+        """
+        if not lyrics:
+            raise ValueError("Inpainting Error: You must provide lyrics for the inpainted section.")
+
+        arguments = {
+            "audio_url": audio_url,
+            "sections": [{"start": start_sec, "end": end_sec}],
+            "prompt": prompt,
+            "tags": self.validate_tags(tags),
+            "lyrics_prompt": lyrics,
+            "selection_crop": False # Return full song, not just the snippet
+        }
+
+        logger.info(f"Submitting inpaint request for {start_sec}-{end_sec}s")
+        return await fal_client.subscribe_async(
+            SonautoModel.INPAINT,
+            arguments=arguments
+        )
+
+# Example Usage (for "Junior Developer" reference)
+if __name__ == "__main__":
+    operator = SonautoOperator()
+    
+    # Example: Generating a Phonk track (requires high prompt strength)
+    async def main():
+        result = await operator.generate_music(
+            prompt="Aggressive drift phonk with heavy 808s",
+            tags=["phonk", "memphis rap", "lo-fi", "distorted"],
+            bpm=140,
+            prompt_strength=2.8, # Higher CFG for style adherence
+            balance_strength=0.6, # Slightly lower for sharper instrumentals
+            num_songs=1
+        )
+        print(result)
+
+    # asyncio.run(main())
