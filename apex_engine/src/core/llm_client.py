@@ -346,3 +346,121 @@ Statement made, demonstration
             tokens_used=0,
             success=True
         )
+    
+    def optimize_seed(
+        self,
+        prompt_text: str = "",
+        lyrics_text: str = "",
+        neuro_effects: str = "",
+        neurochemical_effects: str = "",
+        musical_effects: str = "",
+        genre: str = "trap",
+        mood: str = "aggressive",
+        bpm: int = 140,
+        tags: str = "",
+        model: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Optimize seed composition fields using GPT-4o.
+        
+        References the Neo-Apex documentation to enhance prompts for latent diffusion.
+        
+        Returns:
+            Dict with optimized field values
+        """
+        if not self.is_available:
+            return {
+                "success": True,
+                "prompt_text": prompt_text,
+                "lyrics_text": lyrics_text,
+                "neuro_effects": neuro_effects,
+                "neurochemical_effects": neurochemical_effects,
+                "musical_effects": musical_effects,
+                "tags": tags,
+                "note": "LLM not available - returned original values"
+            }
+        
+        system_prompt = """You are an expert at optimizing prompts for Sonauto, a latent diffusion music generation model.
+
+Your task is to enhance seed composition fields for maximum audio quality and control.
+
+Key principles for Sonauto's latent diffusion model:
+1. **Prompt/Description**: Use specific textural descriptors, not bracketed commands. Focus on:
+   - Instrumentation: "heavy 808 bass", "rolling hi-hats", "sampled jazz piano"
+   - Atmosphere: "dark", "dystopian", "nocturnal", "wide stereo imaging"
+   - Vocal delivery: "aggressive flow", "melodic hook", "staccato delivery"
+   - Production quality: "high-fidelity", "studio-quality", "CD-quality"
+
+2. **Lyrics**: Use proper structural tags [Verse], [Chorus], etc. Format for natural breath:
+   - Line breaks for pauses (not (breath) tokens)
+   - CAPS for intensity shifts
+   - Ellipses for dramatic pauses
+   - Parenthetical text for ad-libs
+
+3. **Tags**: Order matters! Priority: anchor genre > subgenre > mood > era > production > instrumentation
+
+4. **Neuropsychological Effects**: Target frisson through:
+   - Dynamic surges (sudden loudness changes)
+   - Spectral expansion (adding high frequencies)
+   - Expectation violation (surprise elements)
+
+5. **Neurochemical Targets**: Engineer dopamine via:
+   - Syncopation (rhythmic prediction error)
+   - Groove quality (micro-timing)
+   - Earworm hooks (repetition + novelty)
+
+Output a JSON object with the optimized fields. Keep the same structure, just enhance the content.
+Only include fields that have meaningful content to optimize."""
+        
+        user_prompt = f"""Optimize these seed composition fields for a {genre} track at {bpm} BPM with {mood} mood:
+
+**Current Prompt/Description** (max 500 chars):
+{prompt_text or "(empty)"}
+
+**Current Lyrics** (max 1500 chars):
+{lyrics_text or "(empty)"}
+
+**Current Neuropsychological Effects** (max 300 chars):
+{neuro_effects or "(empty)"}
+
+**Current Neurochemical Targets** (max 300 chars):
+{neurochemical_effects or "(empty)"}
+
+**Current Musical Effects** (max 300 chars):
+{musical_effects or "(empty)"}
+
+**Current Tags**:
+{tags or "(empty)"}
+
+Enhance each non-empty field for optimal Sonauto generation. Make the prompt more textural/atmospheric, 
+improve lyrics structure and flow, and ensure tags are properly ordered. 
+
+Return JSON with keys: prompt_text, lyrics_text, neuro_effects, neurochemical_effects, musical_effects, tags
+Only include keys that had meaningful input content."""
+        
+        try:
+            response = self.client.chat.completions.create(
+                model=model or self.DEFAULT_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.7,
+                max_tokens=3000,
+                response_format={"type": "json_object"}
+            )
+            
+            content = response.choices[0].message.content.strip()
+            result = json.loads(content)
+            result["success"] = True
+            result["model"] = response.model
+            result["tokens_used"] = response.usage.total_tokens if response.usage else 0
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Seed optimization failed: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }

@@ -306,6 +306,31 @@ def api_preview_payload(project_id):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/optimize-seed', methods=['POST'])
+def api_optimize_seed():
+    """API: Optimize seed composition fields using GPT-4o."""
+    try:
+        data = request.json or {}
+        
+        result = llm_client.optimize_seed(
+            prompt_text=data.get('prompt_text', ''),
+            lyrics_text=data.get('lyrics_text', ''),
+            neuro_effects=data.get('neuro_effects', ''),
+            neurochemical_effects=data.get('neurochemical_effects', ''),
+            musical_effects=data.get('musical_effects', ''),
+            genre=data.get('genre', 'trap'),
+            mood=data.get('mood', 'aggressive'),
+            bpm=int(data.get('bpm', 140)),
+            tags=data.get('tags', '')
+        )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Seed optimization failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/project/<project_id>/generate-audio', methods=['POST'])
 def api_generate_audio(project_id):
     """API: Generate audio using Sonauto (requires explicit approval)."""
