@@ -187,10 +187,11 @@ For full audio analysis capabilities:
 
 ### Run Tests
 ```bash
-cd apex_engine && python -m pytest tests/test_master.py tests/test_lyrical.py -v
+cd apex_engine && python -m pytest tests/test_fal_models.py tests/test_master.py tests/test_lyrical.py -v
 ```
 
-### Test Coverage (25 tests)
+### Test Coverage (55 tests)
+- **Pydantic Models (30 tests)**: Tag validation, payload format, cost estimation, section format
 - **Workflow Integration**: Orchestrator creation, simulation mode, iteration limits
 - **PVS Calculation**: Formula accuracy, tier assignment, recommendations
 - **State Management**: Initial state creation, validation, USD cost tracking
@@ -199,21 +200,32 @@ cd apex_engine && python -m pytest tests/test_master.py tests/test_lyrical.py -v
 
 ## Recent Changes
 
-### December 11, 2025: Neo-Apex API Refactoring
+### December 11, 2025: fal_client SDK Migration
+- **MAJOR**: Migrated from raw HTTP requests to official `fal_client` SDK
+- Uses `fal_client.subscribe()` for sync polling, `fal_client.subscribe_async()` for async
+- Uses `fal_client.submit_async()` for webhook-based async pattern
+- Fixed O(n²) tag validation bug - now uses O(1) cached frozenset lookup
+- Added `SonautoModel` enum with canonical endpoints (TEXT_TO_MUSIC, INPAINT, EXTEND)
+- Inpaint sections format uses `{"start": x, "end": y}` objects for fal_client SDK
+- Genre CFG defaults now support both formats: 'boom_bap' AND 'boom bap'
+- Added cost estimation methods: `estimate_cost()` on all Pydantic request models
+- Fixed simulated generation to write proper binary WAV files (not text with .wav extension)
+- Added 30 new unit tests for Pydantic models (55 total tests, all passing)
+- Removed unused imports (wait_chain, wait_fixed)
+- Added async support: `_call_fal_async()` for production webhook pattern
+
+### December 11, 2025: Neo-Apex API Refactoring (Phase 1)
 - **BREAKING**: Migrated from api.sonauto.ai/v1 to fal.ai/models/sonauto/v2 endpoints
 - **BREAKING**: Authentication changed from Bearer token to `Key <FAL_KEY>` format
 - Added Pydantic models for rigorous payload validation (fal_models.py)
 - Implemented prompt_strength (CFG scale) with genre-based defaults
-- Fixed inpainting sections format from `[{start, end}]` to `[[start, end]]`
 - Created sonauto_tags.json with 200+ validated Tag Explorer tags
 - Removed deprecated BLACK_MAGIC_TAGS (autoregressive-model superstition)
 - Updated cost tracking from credits to USD ($0.075/generation)
 - Added state fields: cost_usd, cost_budget_usd, request_id, extend_request
 - Added /extend endpoint support with side and crop_duration parameters
-- Enhanced 429 rate limit handling with Retry-After header parsing
 - Added HMAC webhook signature verification method
 - Output format changed from OGG to WAV for stem analysis
-- All 25 tests passing
 
 ### December 2025: Initial Framework
 - Implemented full agent hierarchy (15+ specialized agents)
@@ -225,11 +237,15 @@ cd apex_engine && python -m pytest tests/test_master.py tests/test_lyrical.py -v
 - Created comprehensive test suite (25 unit/integration tests)
 
 ## Architecture Notes
+- **API Client**: Uses official `fal_client` SDK (not raw HTTP requests)
 - **State Management**: TypedDict-based RapGenerationState for type-safe agent communication
 - **Error Handling**: AgentResult pattern with standardized success/failure returns
 - **Budget Enforcement**: Both legacy credits_budget and new cost_budget_usd supported
 - **Graceful Degradation**: Simulated responses when optional libraries unavailable
-- **Resilience**: Tenacity retry with exponential backoff for all API calls
+- **Tag Validation**: O(1) lookup using cached frozenset at module load
+- **Async Patterns**: 
+  - Development: `fal_client.subscribe()` (blocking poll)
+  - Production: `fal_client.submit_async()` with webhooks
 
 ## User Preferences
 - Framework targets rap/hip-hop specifically due to genre's unique requirements
