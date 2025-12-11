@@ -1,24 +1,52 @@
 """
-Sonauto Interface - API Client for Audio Generation.
+Sonauto Interface - Fal.ai API Client for Audio Generation.
 
-This module provides the interface to the Sonauto API for:
-- Song generation from prompts and lyrics
-- Inpainting (surgical section regeneration)
-- Status polling and asset retrieval
-- "Black Magic" tag injection for quality optimization
+This module provides the Neo-Apex interface to Sonauto via fal.ai endpoints:
+- Song generation with CFG scale control (prompt_strength)
+- Inpainting with correct [[start, end]] section format
+- Extension with side and crop_duration parameters
+- Webhook-first async pattern with polling fallback
 
-Reference: Section 3.2 "The Sonauto Operator" from framework documentation
+Architecture: fal.ai/models/sonauto/v2 (NOT api.sonauto.ai/v1)
+Reference: Sonauto API Refactoring Plan, Neo-Apex Architecture Documentation
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union, Tuple
 import os
 import time
 import json
+import hashlib
+import hmac
+import warnings
 
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry, 
+    stop_after_attempt, 
+    wait_exponential, 
+    retry_if_exception_type,
+    wait_chain,
+    wait_fixed
+)
 import requests
 
 from ..agents.agent_base import GenerativeAgent, AgentRole, AgentResult
+from .fal_models import (
+    SonautoGenerationRequest,
+    SonautoInpaintRequest,
+    SonautoExtendRequest,
+    OutputFormat,
+    GENRE_CFG_DEFAULTS,
+    COST_PER_GENERATION_USD,
+    COST_PER_INPAINT_USD,
+    load_tag_database
+)
+
+
+class RateLimitError(Exception):
+    """Raised when API returns 429 Too Many Requests."""
+    def __init__(self, retry_after: Optional[int] = None):
+        self.retry_after = retry_after
+        super().__init__(f"Rate limited. Retry after: {retry_after}s")
 
 
 def _is_retryable_error(exception: Exception) -> bool:
@@ -26,6 +54,8 @@ def _is_retryable_error(exception: Exception) -> bool:
     if isinstance(exception, requests.exceptions.Timeout):
         return True
     if isinstance(exception, requests.exceptions.ConnectionError):
+        return True
+    if isinstance(exception, RateLimitError):
         return True
     if isinstance(exception, requests.exceptions.HTTPError):
         if hasattr(exception, 'response') and exception.response is not None:
@@ -35,35 +65,53 @@ def _is_retryable_error(exception: Exception) -> bool:
 
 class SonautoOperator(GenerativeAgent):
     """
-    Sonauto Operator: The bridge to the generative engine.
+    Sonauto Operator: Neo-Apex bridge to the fal.ai generative engine.
     
-    This agent manages all Sonauto API interactions:
-    - Authentication and request signing
-    - Payload construction with optimized prompts
-    - Generation and inpainting requests
-    - Polling for completion and asset retrieval
+    This agent manages all Sonauto API interactions via fal.ai:
+    - Authentication via FAL_KEY (Key header format)
+    - Pydantic-validated payload construction
+    - Generation, inpainting, and extension requests
+    - Webhook-first with polling fallback
+    - USD cost tracking (Shadow Ledger compatible)
     
-    Reference: Sonauto API documentation
+    Reference: 
+    - Sonauto API Refactoring Plan Section 2.2 "Canonical Endpoint Decision"
+    - Sonauto API Design & Critique Section 4.1 "God-Mode Payload"
     """
     
-    BASE_URL = "https://api.sonauto.ai/v1"
+    FAL_BASE_URL = "https://fal.run/fal-ai/sonauto/v2"
+    FAL_QUEUE_URL = "https://queue.fal.run/fal-ai/sonauto/v2"
     
-    BLACK_MAGIC_TAGS = [
-        "high fidelity", "studio quality", "mixed vocals",
-        "professional production", "clear vocals"
-    ]
-    
-    RAP_TAG_TAXONOMY = {
-        'core': ['rap', 'hip hop'],
-        'subgenre': ['trap', 'drill', 'boom bap', 'pop rap', 'cloud rap'],
-        'era': ['90s', '2000s', 'old school', 'modern'],
-        'mood': ['aggressive', 'chill', 'dark', 'energetic', 'emotional'],
-        'instrumentation': ['piano', 'guitar', 'synth', '808', 'sample']
+    ENDPOINTS = {
+        'generate': '/text-to-music',
+        'inpaint': '/inpaint',
+        'extend': '/extend'
     }
+    
+    SUPPORTED_ENV_KEYS = ['FAL_KEY', 'SONAUTO_API_KEY']
     
     @property
     def role(self) -> AgentRole:
         return AgentRole.SONAUTO_OPERATOR
+    
+    def _get_api_key(self) -> Optional[str]:
+        """Get API key from environment, preferring FAL_KEY."""
+        for key_name in self.SUPPORTED_ENV_KEYS:
+            key = os.environ.get(key_name)
+            if key:
+                return key
+        return None
+    
+    def _get_auth_headers(self, api_key: str) -> Dict[str, str]:
+        """
+        Construct authentication headers for fal.ai.
+        
+        Reference: Refactoring Plan Section 2.3 - Key <FAL_KEY> format
+        """
+        return {
+            'Authorization': f'Key {api_key}',
+            'Content-Type': 'application/json'
+        }
     
     def _validate_input(self, state: Dict[str, Any]) -> List[str]:
         """Validate that we have necessary inputs for generation."""
@@ -80,48 +128,59 @@ class SonautoOperator(GenerativeAgent):
     
     def _execute(self, state: Dict[str, Any]) -> AgentResult:
         """
-        Execute Sonauto generation or inpainting.
+        Execute Sonauto generation, inpainting, or extension.
         
         Flow:
-        1. Check if this is a new generation or inpainting
-        2. Construct optimized payload
-        3. Submit request to API
-        4. Poll for completion
-        5. Download and store audio asset
+        1. Check operation type (new generation, inpaint, or extend)
+        2. Construct Pydantic-validated payload
+        3. Submit request to fal.ai
+        4. Handle async completion (webhook or polling)
+        5. Download and store audio asset (WAV format)
         """
-        if state.get('fix_segments') and state.get('audio_url'):
+        if state.get('extend_request'):
+            return self._execute_extension(state)
+        elif state.get('fix_segments') and state.get('audio_url'):
             return self._execute_inpainting(state)
         else:
             return self._execute_generation(state)
     
     def _execute_generation(self, state: Dict[str, Any]) -> AgentResult:
-        """Execute a new song generation."""
-        self.logger.info("Triggering new generation...")
+        """Execute a new song generation via fal.ai."""
+        self.logger.info("Triggering new generation via fal.ai...")
         
-        payload = self._construct_generation_payload(state)
+        try:
+            request = self._build_generation_request(state)
+            payload = request.to_fal_payload()
+        except Exception as e:
+            self.logger.error(f"Payload validation failed: {e}")
+            return AgentResult.failure_result(
+                errors=[f"Invalid generation payload: {str(e)}"]
+            )
         
-        api_key = os.environ.get('SONAUTO_API_KEY')
+        api_key = self._get_api_key()
         
         if not api_key:
             self.logger.warning("No API key found, using simulated generation")
             return self._simulated_generation(state, payload)
         
         try:
-            result = self._call_generation_api(payload, api_key)
+            result = self._call_fal_api('generate', payload, api_key)
             
-            audio_path = self._download_audio(result['audio_url'])
+            audio_url = self._extract_audio_url(result)
+            audio_path = self._download_audio(audio_url, output_format='wav')
             
             return AgentResult.success_result(
                 state_updates={
-                    'task_id': result['task_id'],
-                    'audio_url': result['audio_url'],
+                    'request_id': result.get('request_id'),
+                    'task_id': result.get('request_id'),
+                    'audio_url': audio_url,
                     'local_filepath': audio_path,
                     'seed': result.get('seed'),
-                    'credits_used': state.get('credits_used', 0) + 100,
+                    'cost_usd': state.get('cost_usd', 0.0) + COST_PER_GENERATION_USD,
                     'iteration_count': state.get('iteration_count', 0) + 1,
                     'status': 'generated'
                 },
-                metadata={'api_response': result}
+                metadata={'api_response': result, 'payload': payload}
             )
             
         except Exception as e:
@@ -131,33 +190,47 @@ class SonautoOperator(GenerativeAgent):
             )
     
     def _execute_inpainting(self, state: Dict[str, Any]) -> AgentResult:
-        """Execute surgical inpainting on specific segments."""
+        """
+        Execute surgical inpainting on specific segments.
+        
+        Reference: Design & Critique Section 5.2 - Structural Architect
+        Critical: Uses [[start, end]] format, NOT [{start, end}]
+        """
         self.logger.info(f"Triggering inpainting for segments: {state['fix_segments']}")
         
-        payload = self._construct_inpainting_payload(state)
+        try:
+            request = self._build_inpaint_request(state)
+            payload = request.to_fal_payload()
+        except Exception as e:
+            self.logger.error(f"Inpaint payload validation failed: {e}")
+            return AgentResult.failure_result(
+                errors=[f"Invalid inpaint payload: {str(e)}"]
+            )
         
-        api_key = os.environ.get('SONAUTO_API_KEY')
+        api_key = self._get_api_key()
         
         if not api_key:
             self.logger.warning("No API key found, using simulated inpainting")
             return self._simulated_inpainting(state, payload)
         
         try:
-            result = self._call_inpainting_api(payload, api_key)
+            result = self._call_fal_api('inpaint', payload, api_key)
             
-            audio_path = self._download_audio(result['audio_url'])
+            audio_url = self._extract_audio_url(result)
+            audio_path = self._download_audio(audio_url, output_format='wav')
             
             return AgentResult.success_result(
                 state_updates={
-                    'task_id': result['task_id'],
-                    'audio_url': result['audio_url'],
+                    'request_id': result.get('request_id'),
+                    'task_id': result.get('request_id'),
+                    'audio_url': audio_url,
                     'local_filepath': audio_path,
                     'fix_segments': [],
-                    'credits_used': state.get('credits_used', 0) + 50,
+                    'cost_usd': state.get('cost_usd', 0.0) + COST_PER_INPAINT_USD,
                     'iteration_count': state.get('iteration_count', 0) + 1,
                     'status': 'inpainted'
                 },
-                metadata={'api_response': result}
+                metadata={'api_response': result, 'payload': payload}
             )
             
         except Exception as e:
@@ -166,64 +239,141 @@ class SonautoOperator(GenerativeAgent):
                 errors=[f"Inpainting failed: {str(e)}"]
             )
     
-    def _construct_generation_payload(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    def _execute_extension(self, state: Dict[str, Any]) -> AgentResult:
         """
-        Construct optimized payload for generation.
+        Execute track extension via fal.ai.
+        
+        Reference: Design & Critique Section 6.2 - Extension Protocol
+        Supports 'left' (prepend) and 'right' (append) with crop_duration
+        """
+        self.logger.info("Triggering extension via fal.ai...")
+        
+        try:
+            request = self._build_extend_request(state)
+            payload = request.to_fal_payload()
+        except Exception as e:
+            self.logger.error(f"Extension payload validation failed: {e}")
+            return AgentResult.failure_result(
+                errors=[f"Invalid extension payload: {str(e)}"]
+            )
+        
+        api_key = self._get_api_key()
+        
+        if not api_key:
+            self.logger.warning("No API key found, using simulated extension")
+            return self._simulated_generation(state, payload)
+        
+        try:
+            result = self._call_fal_api('extend', payload, api_key)
+            
+            audio_url = self._extract_audio_url(result)
+            audio_path = self._download_audio(audio_url, output_format='wav')
+            
+            return AgentResult.success_result(
+                state_updates={
+                    'request_id': result.get('request_id'),
+                    'audio_url': audio_url,
+                    'local_filepath': audio_path,
+                    'cost_usd': state.get('cost_usd', 0.0) + COST_PER_GENERATION_USD,
+                    'iteration_count': state.get('iteration_count', 0) + 1,
+                    'status': 'extended'
+                },
+                metadata={'api_response': result, 'payload': payload}
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Extension failed: {e}")
+            return AgentResult.failure_result(
+                errors=[f"Extension failed: {str(e)}"]
+            )
+    
+    def _build_generation_request(self, state: Dict[str, Any]) -> SonautoGenerationRequest:
+        """
+        Build validated generation request with Pydantic model.
         
         Includes:
-        - Enhanced prompt with acoustic descriptors
-        - Validated lyrics with structure tags
-        - Optimized tag selection
-        - Balance and strength parameters
+        - Enhanced prompt with textural descriptors (NOT Black Magic tags)
+        - Validated tags from Tag Explorer
+        - Genre-appropriate CFG scale (prompt_strength)
+        - balance_strength for vocal/instrumental mix
         """
         plan = state.get('structured_plan', {})
         
         prompt = self._construct_prompt(state)
-        
-        tags = self._select_tags(plan)
-        
+        tags = self._select_validated_tags(plan, state)
         lyrics = state.get('lyrics_validated') or state.get('lyrics_draft', '')
         
-        payload = {
-            'prompt': prompt,
-            'lyrics': lyrics,
-            'tags': tags,
-            'instrumental': plan.get('instrumental', False),
-            'balance_strength': plan.get('balance_strength', 0.75),
-            'num_songs': 2
-        }
+        subgenre = plan.get('subgenre', 'default')
+        prompt_strength = plan.get('prompt_strength') or GENRE_CFG_DEFAULTS.get(
+            subgenre, GENRE_CFG_DEFAULTS['default']
+        )
         
-        if plan.get('bpm'):
-            payload['bpm'] = plan['bpm']
-            
-        if state.get('seed'):
-            payload['seed'] = state['seed']
-            
-        return payload
+        return SonautoGenerationRequest(
+            prompt=prompt,
+            lyrics=lyrics if lyrics else None,
+            tags=tags,
+            prompt_strength=prompt_strength,
+            balance_strength=plan.get('balance_strength', 0.75),
+            bpm=plan.get('bpm', 'auto'),
+            seed=state.get('seed'),
+            num_songs=plan.get('num_songs', 1),
+            output_format=OutputFormat.WAV,
+            instrumental=plan.get('instrumental', False)
+        )
     
-    def _construct_inpainting_payload(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Construct payload for inpainting request."""
-        sections = []
-        for segment in state.get('fix_segments', []):
-            sections.append({
-                'start': segment['start'],
-                'end': segment['end']
-            })
+    def _build_inpaint_request(self, state: Dict[str, Any]) -> SonautoInpaintRequest:
+        """
+        Build validated inpaint request with correct section format.
         
-        return {
-            'audio_url': state['audio_url'],
-            'sections': sections,
-            'prompt': state.get('sonauto_prompt', ''),
-            'lyrics': state.get('lyrics_validated', ''),
-            'instrumental': False
-        }
+        Critical: sections are [[start, end]] tuples, NOT [{start, end}] objects
+        Reference: Design & Critique Section 5.2
+        """
+        sections: List[Tuple[float, float]] = []
+        for segment in state.get('fix_segments', []):
+            if isinstance(segment, dict):
+                sections.append((segment['start'], segment['end']))
+            elif isinstance(segment, (list, tuple)):
+                sections.append((segment[0], segment[1]))
+        
+        plan = state.get('structured_plan', {})
+        tags = self._select_validated_tags(plan, state)
+        
+        return SonautoInpaintRequest(
+            audio_url=state['audio_url'],
+            sections=sections,
+            lyrics=state.get('lyrics_validated', ''),
+            tags=tags,
+            prompt=state.get('inpaint_prompt', state.get('sonauto_prompt', '')),
+            prompt_strength=plan.get('prompt_strength', 2.5),
+            balance_strength=plan.get('balance_strength', 0.7),
+            seed=state.get('inpaint_seed')
+        )
+    
+    def _build_extend_request(self, state: Dict[str, Any]) -> SonautoExtendRequest:
+        """Build validated extension request."""
+        extend_config = state.get('extend_request', {})
+        plan = state.get('structured_plan', {})
+        tags = self._select_validated_tags(plan, state)
+        
+        return SonautoExtendRequest(
+            audio_url=state['audio_url'],
+            side=extend_config.get('side', 'right'),
+            crop_duration=extend_config.get('crop_duration'),
+            prompt=extend_config.get('prompt'),
+            lyrics=extend_config.get('lyrics'),
+            tags=tags,
+            prompt_strength=plan.get('prompt_strength', 2.0),
+            balance_strength=plan.get('balance_strength', 0.7),
+            seed=extend_config.get('seed')
+        )
     
     def _construct_prompt(self, state: Dict[str, Any]) -> str:
         """
-        Construct an optimized prompt for generation.
+        Construct optimized prompt for diffusion model.
         
-        Combines user intent with "Black Magic" descriptors
-        known to improve output quality.
+        Uses textural descriptors (NOT "Black Magic" tags which are 
+        autoregressive-model superstitions).
+        Reference: Design & Critique Section 3.3
         """
         plan = state.get('structured_plan', {})
         base_prompt = state.get('sonauto_prompt') or state.get('user_prompt', '')
@@ -237,134 +387,198 @@ class SonautoOperator(GenerativeAgent):
             components.append(f"{plan['mood']} atmosphere")
             
         if plan.get('instrumentation'):
-            components.append(f"with {', '.join(plan['instrumentation'])}")
+            instr = plan['instrumentation']
+            if isinstance(instr, dict):
+                primary = instr.get('primary', [])
+                if primary:
+                    components.append(f"featuring {', '.join(primary)}")
+            elif isinstance(instr, list):
+                components.append(f"with {', '.join(instr)}")
         
-        components.extend(self.BLACK_MAGIC_TAGS[:2])
+        if plan.get('vocal_texture'):
+            components.append(f"{plan['vocal_texture']} vocal delivery")
         
         return '. '.join(filter(None, components))
     
-    def _select_tags(self, plan: Dict[str, Any]) -> List[str]:
+    def _select_validated_tags(self, plan: Dict[str, Any], state: Dict[str, Any]) -> List[str]:
         """
-        Select optimal tags from the taxonomy.
+        Select tags validated against Tag Explorer database.
         
-        Prioritizes:
-        1. Core genre tags (always include)
-        2. Subgenre (from plan)
-        3. Mood tags
-        4. Era if specified
+        Tag order matters - anchor genre first, then subgenre, mood, era, production.
+        Reference: Design & Critique Section 4.2 - Tag ordering
         """
-        tags = list(self.RAP_TAG_TAXONOMY['core'])
+        tags = []
         
-        if plan.get('subgenre') and plan['subgenre'] in self.RAP_TAG_TAXONOMY['subgenre']:
-            tags.append(plan['subgenre'])
+        if plan.get('genre_tags'):
+            tags.extend(plan['genre_tags'])
         else:
-            tags.append('trap')
-            
-        if plan.get('mood') and plan['mood'] in self.RAP_TAG_TAXONOMY['mood']:
+            tags.extend(['hip hop', 'rap'])
+        
+        if plan.get('subgenre'):
+            tags.append(plan['subgenre'])
+        
+        if plan.get('mood'):
             tags.append(plan['mood'])
-            
-        if plan.get('era') and plan['era'] in self.RAP_TAG_TAXONOMY['era']:
+        
+        if plan.get('era'):
             tags.append(plan['era'])
         
-        return tags[:5]
+        if plan.get('production_tags'):
+            tags.extend(plan['production_tags'])
+        
+        if plan.get('tags'):
+            tags.extend(plan['tags'])
+        
+        seen = set()
+        unique_tags = []
+        for tag in tags:
+            if tag.lower() not in seen:
+                seen.add(tag.lower())
+                unique_tags.append(tag)
+        
+        return unique_tags[:8]
     
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=30),
-        retry=retry_if_exception_type((requests.exceptions.Timeout, requests.exceptions.ConnectionError)),
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=1, min=4, max=60),
+        retry=retry_if_exception_type((
+            requests.exceptions.Timeout, 
+            requests.exceptions.ConnectionError,
+            RateLimitError
+        )),
         reraise=True
     )
-    def _call_generation_api(self, payload: Dict[str, Any], api_key: str) -> Dict[str, Any]:
-        """Call the Sonauto generation API with retry logic."""
-        headers = {
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json'
-        }
+    def _call_fal_api(
+        self, 
+        endpoint_type: str, 
+        payload: Dict[str, Any], 
+        api_key: str,
+        use_queue: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Call fal.ai API with enhanced retry logic.
+        
+        Handles 429 rate limits by parsing Retry-After header.
+        Reference: Refactoring Plan Section 7.2
+        """
+        headers = self._get_auth_headers(api_key)
+        endpoint = self.ENDPOINTS.get(endpoint_type, '/text-to-music')
+        
+        if use_queue:
+            url = f'{self.FAL_QUEUE_URL}{endpoint}'
+        else:
+            url = f'{self.FAL_BASE_URL}{endpoint}'
         
         response = requests.post(
-            f'{self.BASE_URL}/generations',
+            url,
             headers=headers,
             json=payload,
             timeout=30
         )
+        
+        if response.status_code == 429:
+            retry_after = response.headers.get('Retry-After')
+            retry_seconds = int(retry_after) if retry_after else 30
+            self.logger.warning(f"Rate limited. Waiting {retry_seconds}s...")
+            raise RateLimitError(retry_after=retry_seconds)
+        
         response.raise_for_status()
         
-        task_id = response.json().get('id') or response.json().get('task_id')
+        data = response.json()
         
-        return self._poll_for_completion(task_id, api_key)
+        if use_queue and 'request_id' in data:
+            return self._poll_for_completion(data['request_id'], api_key, endpoint_type)
+        
+        return data
     
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=30),
-        retry=retry_if_exception_type((requests.exceptions.Timeout, requests.exceptions.ConnectionError)),
-        reraise=True
-    )
-    def _call_inpainting_api(self, payload: Dict[str, Any], api_key: str) -> Dict[str, Any]:
-        """Call the Sonauto inpainting API with retry logic."""
-        headers = {
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json'
-        }
+    def _poll_for_completion(
+        self, 
+        request_id: str, 
+        api_key: str,
+        endpoint_type: str,
+        timeout: int = 300
+    ) -> Dict[str, Any]:
+        """
+        Poll fal.ai queue for completion.
         
-        response = requests.post(
-            f'{self.BASE_URL}/generations/inpaint',
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
-        response.raise_for_status()
-        
-        task_id = response.json().get('id') or response.json().get('task_id')
-        
-        return self._poll_for_completion(task_id, api_key)
-    
-    def _poll_for_completion(self, task_id: str, api_key: str, timeout: int = 300) -> Dict[str, Any]:
-        """Poll the API until generation completes."""
-        import requests
-        
-        headers = {'Authorization': f'Bearer {api_key}'}
-        url = f'{self.BASE_URL}/generations/{task_id}'
+        Reference: Refactoring Plan Section 5.1 - Generation takes 30-90 seconds
+        """
+        headers = self._get_auth_headers(api_key)
+        endpoint = self.ENDPOINTS.get(endpoint_type, '/text-to-music')
+        status_url = f'{self.FAL_QUEUE_URL}{endpoint}/requests/{request_id}/status'
+        result_url = f'{self.FAL_QUEUE_URL}{endpoint}/requests/{request_id}'
         
         start_time = time.time()
         wait_time = 5
         
         while (time.time() - start_time) < timeout:
-            response = requests.get(url, headers=headers)
+            response = requests.get(status_url, headers=headers, timeout=30)
             response.raise_for_status()
             
-            data = response.json()
-            status = data.get('status', '').upper()
+            status_data = response.json()
+            status = status_data.get('status', '').upper()
             
-            if status in ('COMPLETED', 'SUCCESS'):
-                return {
-                    'task_id': task_id,
-                    'audio_url': data.get('song_paths', [None])[0],
-                    'status': status,
-                    'seed': data.get('seed')
-                }
-            elif status in ('FAILED', 'FAILURE'):
-                raise RuntimeError(f"Generation failed: {data.get('error_message', 'Unknown error')}")
+            if status in ('COMPLETED', 'OK'):
+                result_response = requests.get(result_url, headers=headers, timeout=30)
+                result_response.raise_for_status()
+                result = result_response.json()
+                result['request_id'] = request_id
+                return result
+                
+            elif status == 'FAILED':
+                error = status_data.get('error', 'Unknown error')
+                raise RuntimeError(f"Generation failed: {error}")
+            
+            elif status == 'IN_QUEUE':
+                position = status_data.get('queue_position', 'unknown')
+                self.logger.info(f"In queue, position: {position}")
             
             time.sleep(wait_time)
             wait_time = min(wait_time + 2, 15)
         
         raise TimeoutError(f"Generation timed out after {timeout} seconds")
     
+    def _extract_audio_url(self, result: Dict[str, Any]) -> str:
+        """Extract audio URL from fal.ai response, handling num_songs > 1."""
+        if 'audio' in result:
+            audio_list = result['audio']
+            if isinstance(audio_list, list) and audio_list:
+                return audio_list[0].get('url', '')
+            elif isinstance(audio_list, dict):
+                return audio_list.get('url', '')
+        
+        if 'audio_url' in result:
+            return result['audio_url']
+        
+        if 'song_paths' in result:
+            paths = result['song_paths']
+            if paths:
+                return paths[0]
+        
+        return ''
+    
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=30),
-        retry=retry_if_exception_type((requests.exceptions.Timeout, requests.exceptions.ConnectionError)),
+        retry=retry_if_exception_type((
+            requests.exceptions.Timeout, 
+            requests.exceptions.ConnectionError
+        )),
         reraise=True
     )
-    def _download_audio(self, url: str) -> str:
-        """Download audio from URL to local filesystem with retry logic."""
+    def _download_audio(self, url: str, output_format: str = 'wav') -> str:
+        """
+        Download audio from fal.ai CDN.
+        
+        Reference: Design & Critique Section 4.2 - WAV required for stem analysis
+        """
         if not url:
             return ''
         
         os.makedirs('./output', exist_ok=True)
-        local_path = f'./output/generated_{int(time.time())}.ogg'
+        local_path = f'./output/generated_{int(time.time())}.{output_format}'
         
-        response = requests.get(url, stream=True, timeout=60)
+        response = requests.get(url, stream=True, timeout=120)
         response.raise_for_status()
         
         with open(local_path, 'wb') as f:
@@ -381,21 +595,22 @@ class SonautoOperator(GenerativeAgent):
         
         time.sleep(0.5)
         
-        task_id = f"sim_{int(time.time())}_{random.randint(1000, 9999)}"
+        request_id = f"sim_{int(time.time())}_{random.randint(1000, 9999)}"
         
         os.makedirs('./output', exist_ok=True)
-        local_path = f'./output/simulated_{task_id}.ogg'
+        local_path = f'./output/simulated_{request_id}.wav'
         
         with open(local_path, 'w') as f:
-            f.write(f"# Simulated audio file\n# Payload: {json.dumps(payload, indent=2)}")
+            f.write(f"# Simulated audio file (WAV)\n# Payload: {json.dumps(payload, indent=2)}")
         
         return AgentResult.success_result(
             state_updates={
-                'task_id': task_id,
-                'audio_url': f'https://simulated.example.com/{task_id}.ogg',
+                'request_id': request_id,
+                'task_id': request_id,
+                'audio_url': f'https://simulated.fal.ai/{request_id}.wav',
                 'local_filepath': local_path,
                 'seed': random.randint(1, 1000000),
-                'credits_used': state.get('credits_used', 0) + 100,
+                'cost_usd': state.get('cost_usd', 0.0) + COST_PER_GENERATION_USD,
                 'iteration_count': state.get('iteration_count', 0) + 1,
                 'status': 'simulated_generation'
             },
@@ -411,18 +626,55 @@ class SonautoOperator(GenerativeAgent):
         
         time.sleep(0.3)
         
-        task_id = f"sim_inpaint_{int(time.time())}_{random.randint(1000, 9999)}"
+        request_id = f"sim_inpaint_{int(time.time())}_{random.randint(1000, 9999)}"
         
         return AgentResult.success_result(
             state_updates={
-                'task_id': task_id,
+                'request_id': request_id,
+                'task_id': request_id,
                 'audio_url': state.get('audio_url', ''),
                 'local_filepath': state.get('local_filepath', ''),
                 'fix_segments': [],
-                'credits_used': state.get('credits_used', 0) + 50,
+                'cost_usd': state.get('cost_usd', 0.0) + COST_PER_INPAINT_USD,
                 'iteration_count': state.get('iteration_count', 0) + 1,
                 'status': 'simulated_inpainting'
             },
             warnings=['Using simulated inpainting (no API key)'],
             metadata={'payload': payload, 'simulated': True}
         )
+    
+    @staticmethod
+    def verify_webhook_signature(
+        request_body: bytes,
+        signature: str,
+        timestamp: str,
+        request_id: str,
+        secret_key: str
+    ) -> bool:
+        """
+        Verify fal.ai webhook signature for security.
+        
+        Reference: Refactoring Plan Section 5.3 - Webhook Verification
+        
+        Steps:
+        1. Check timestamp is within 5 minutes (prevent replay attacks)
+        2. Construct string: request_id + timestamp + body
+        3. Compute HMAC-SHA256 with secret
+        4. Compare with provided signature
+        """
+        try:
+            ts = int(timestamp)
+            now = int(time.time())
+            if abs(now - ts) > 300:
+                return False
+        except (ValueError, TypeError):
+            return False
+        
+        message = f"{request_id}{timestamp}{request_body.decode('utf-8')}"
+        expected = hmac.new(
+            secret_key.encode('utf-8'),
+            message.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        
+        return hmac.compare_digest(expected, signature)

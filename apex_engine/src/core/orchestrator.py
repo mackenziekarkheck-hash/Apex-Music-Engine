@@ -238,6 +238,11 @@ class APEXOrchestrator:
                 self.logger.warning("Credits budget exceeded")
                 state['errors'] = state.get('errors', []) + ['Credits budget exceeded']
                 current_node = WorkflowNode.ERROR
+            
+            if state.get('cost_usd', 0.0) > state.get('cost_budget_usd', 5.0):
+                self.logger.warning("USD cost budget exceeded")
+                state['errors'] = state.get('errors', []) + ['USD cost budget exceeded']
+                current_node = WorkflowNode.ERROR
         
         state['status'] = GenerationStatus.COMPLETED.value if current_node == WorkflowNode.COMPLETE else GenerationStatus.FAILED.value
         

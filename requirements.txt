@@ -13,3 +13,4 @@ python-dotenv
 requests
 tenacity
 pytest
+pydantic

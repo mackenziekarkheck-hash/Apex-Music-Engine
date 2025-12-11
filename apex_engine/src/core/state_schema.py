@@ -132,6 +132,11 @@ class RapGenerationState(TypedDict, total=False):
     max_iterations: int
     credits_used: int
     credits_budget: int
+    cost_usd: float
+    cost_budget_usd: float
+    request_id: str
+    extend_request: Optional[Dict[str, Any]]
+    inpaint_prompt: Optional[str]
     errors: List[str]
     warnings: List[str]
     is_complete: bool
@@ -189,6 +194,11 @@ def create_initial_state(user_prompt: str, **kwargs) -> RapGenerationState:
         'max_iterations': kwargs.get('max_iterations', 3),
         'credits_used': 0,
         'credits_budget': kwargs.get('credits_budget', 500),
+        'cost_usd': 0.0,
+        'cost_budget_usd': kwargs.get('cost_budget_usd', 5.0),
+        'request_id': '',
+        'extend_request': None,
+        'inpaint_prompt': None,
         'errors': [],
         'warnings': [],
         'is_complete': False
@@ -221,5 +231,8 @@ def validate_state(state: RapGenerationState) -> List[str]:
         
     if state.get('credits_used', 0) > state.get('credits_budget', 500):
         errors.append("Credits budget exceeded")
+        
+    if state.get('cost_usd', 0.0) > state.get('cost_budget_usd', 5.0):
+        errors.append("USD cost budget exceeded")
         
     return errors
