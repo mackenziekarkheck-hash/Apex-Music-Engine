@@ -5,6 +5,264 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ project.name }} - APEX Engine</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .section-header label {
+            margin: 0;
+            font-weight: 500;
+        }
+        
+        .help-btn {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--accent);
+            font-size: 11px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .help-btn:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+        
+        .char-counter {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-align: right;
+            margin-top: 3px;
+        }
+        
+        .char-counter.warning { color: var(--accent-yellow); }
+        .char-counter.error { color: var(--accent-red); }
+        
+        .seed-component {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .seed-component textarea {
+            background: var(--bg-secondary);
+            min-height: 60px;
+            font-size: 0.85rem;
+        }
+        
+        .seed-component.lyrics textarea {
+            min-height: 120px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .component-hint {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+        
+        .seed-section {
+            grid-row: 1 / 3;
+        }
+        
+        .seed-section h2 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .optimize-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .optimize-bar .btn {
+            flex: 1;
+            font-size: 0.85rem;
+            padding: 8px 12px;
+        }
+        
+        .loading-state {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .loading-state.active {
+            display: flex;
+        }
+        
+        .loading-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        
+        .modal-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            max-width: 700px;
+            width: 100%;
+            margin: 40px 0;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 22px;
+            cursor: pointer;
+        }
+        
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+        
+        .modal-body {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        .tag-category {
+            margin-bottom: 15px;
+        }
+        
+        .tag-category h4 {
+            color: var(--accent);
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+        
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .tag-chip {
+            background: var(--bg-tertiary);
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        
+        .tag-chip:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        
+        .guidance-section {
+            margin-bottom: 15px;
+        }
+        
+        .guidance-section h4 {
+            color: var(--accent-purple);
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .guidance-section p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+        
+        .guidance-section ul {
+            margin-left: 18px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .guidance-section li {
+            margin-bottom: 4px;
+        }
+        
+        .guidance-section code {
+            background: var(--bg-tertiary);
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+        }
+        
+        .collapsible-toggle {
+            background: none;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 4px 0;
+        }
+        
+        .collapsible-content {
+            display: none;
+        }
+        
+        .collapsible-content.expanded {
+            display: block;
+        }
+    </style>
 </head>
 <body>
     <div class="container workspace">
@@ -23,34 +281,77 @@
         
         <main class="workspace-grid">
             <section class="seed-section">
-                <h2>Creative Brief</h2>
-                <textarea id="seed-text" placeholder="Enter your creative brief / seed concept...">{{ project.seed_text or '' }}</textarea>
-                <div class="seed-actions">
+                <h2>
+                    Seed Composition
+                    <button type="button" class="help-btn" onclick="openModal('seedGuidanceModal')">?</button>
+                </h2>
+                
+                <div class="seed-component">
+                    <div class="section-header">
+                        <label>Prompt / Description</label>
+                    </div>
+                    <p class="component-hint">Texture, atmosphere, instrumentation</p>
+                    <textarea id="prompt-text" rows="2" placeholder="High-fidelity production with heavy 808s, wide stereo imaging...">{{ project.prompt_text or '' }}</textarea>
+                    <div class="char-counter" id="promptCounter">0 / 500 chars</div>
+                </div>
+                
+                <div class="seed-component lyrics">
+                    <div class="section-header">
+                        <label>Lyrics</label>
+                    </div>
+                    <p class="component-hint">Use [Verse], [Chorus] tags. Line breaks = pauses.</p>
+                    <textarea id="lyrics-text" rows="6" placeholder="[Intro]
+(Yeah)
+
+[Verse 1]
+Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
+                    <div class="char-counter" id="lyricsCounter">0 / 1500 chars</div>
+                </div>
+                
+                <button type="button" class="collapsible-toggle" onclick="toggleAdvanced()">
+                    Show Advanced Fields
+                </button>
+                
+                <div class="collapsible-content" id="advancedFields">
+                    <div class="seed-component">
+                        <div class="section-header">
+                            <label>Neuropsychological Effects</label>
+                        </div>
+                        <p class="component-hint">Frisson triggers, tension/release</p>
+                        <textarea id="neuro-effects" rows="2" placeholder="Build tension in verse, release on chorus...">{{ project.neuro_effects or '' }}</textarea>
+                        <div class="char-counter" id="neuroCounter">0 / 300 chars</div>
+                    </div>
+                    
+                    <div class="seed-component">
+                        <div class="section-header">
+                            <label>Neurochemical Targets</label>
+                        </div>
+                        <p class="component-hint">Syncopation, groove, dopamine hooks</p>
+                        <textarea id="neurochemical-effects" rows="2" placeholder="Syncopated hi-hats for prediction error...">{{ project.neurochemical_effects or '' }}</textarea>
+                        <div class="char-counter" id="neurochemCounter">0 / 300 chars</div>
+                    </div>
+                    
+                    <div class="seed-component">
+                        <div class="section-header">
+                            <label>Musical Effects</label>
+                        </div>
+                        <p class="component-hint">Production, mixing, references</p>
+                        <textarea id="musical-effects" rows="2" placeholder="Half-time verse, double-time chorus...">{{ project.musical_effects or '' }}</textarea>
+                        <div class="char-counter" id="musicalCounter">0 / 300 chars</div>
+                    </div>
+                </div>
+                
+                <div class="optimize-bar">
+                    <button class="btn btn-secondary" id="optimizeBtn" onclick="optimizeSeed()">
+                        Optimize with AI
+                    </button>
+                    <div class="loading-state" id="optimizeLoading">
+                        <div class="loading-spinner"></div>
+                        <span>Optimizing...</span>
+                    </div>
                     <button class="btn btn-secondary" onclick="saveSeed()">Save</button>
                     <button class="btn btn-primary" onclick="generateLyrics()" id="generate-btn">
                         Generate Lyrics
-                    </button>
-                </div>
-            </section>
-            
-            <section class="lyrics-section">
-                <div class="lyrics-header">
-                    <h2>Lyrics</h2>
-                    <div class="version-selector">
-                        <select id="version-select" onchange="loadVersion(this.value)">
-                            {% for iter in project.iterations %}
-                            <option value="{{ iter.version }}" {% if iter.version == project.current_iteration %}selected{% endif %}>
-                                v{{ iter.version }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <textarea id="lyrics-editor" placeholder="Lyrics will appear here after generation...">{% if project.iterations %}{{ project.iterations[-1].lyrics }}{% endif %}</textarea>
-                <div class="lyrics-actions">
-                    <button class="btn btn-secondary" onclick="scoreLyrics()">Score</button>
-                    <button class="btn btn-secondary" onclick="iterateLyrics()" id="iterate-btn">
-                        Iterate
                     </button>
                 </div>
             </section>
@@ -92,7 +393,29 @@
                 </div>
             </section>
             
-            <section class="approval-section">
+            <section class="lyrics-section" style="grid-row: auto;">
+                <div class="lyrics-header">
+                    <h2>Generated Lyrics</h2>
+                    <div class="version-selector">
+                        <select id="version-select" onchange="loadVersion(this.value)">
+                            {% for iter in project.iterations %}
+                            <option value="{{ iter.version }}" {% if iter.version == project.current_iteration %}selected{% endif %}>
+                                v{{ iter.version }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <textarea id="lyrics-editor" placeholder="Lyrics will appear here after generation...">{% if project.iterations %}{{ project.iterations[-1].lyrics }}{% endif %}</textarea>
+                <div class="lyrics-actions">
+                    <button class="btn btn-secondary" onclick="scoreLyrics()">Score</button>
+                    <button class="btn btn-secondary" onclick="iterateLyrics()" id="iterate-btn">
+                        Iterate
+                    </button>
+                </div>
+            </section>
+            
+            <section class="approval-section" style="grid-row: auto;">
                 <h2>Generation</h2>
                 <div class="approval-status">
                     {% if project.status == 'approved' %}
@@ -143,8 +466,159 @@
         </div>
     </div>
     
+    <div class="modal-overlay" id="seedGuidanceModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Seed Composition Guide</h3>
+                <button class="modal-close" onclick="closeModal('seedGuidanceModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="guidance-section">
+                    <h4>Latent Diffusion Prompting</h4>
+                    <p>Sonauto uses a latent diffusion model. Control is achieved through semantic embeddings, not bracketed commands.</p>
+                </div>
+                
+                <div class="guidance-section">
+                    <h4>Prompt / Description</h4>
+                    <ul>
+                        <li><strong>Instrumentation:</strong> "heavy 808 bass", "rolling hi-hats", "sampled jazz piano"</li>
+                        <li><strong>Atmosphere:</strong> "dark", "dystopian", "wide stereo imaging"</li>
+                        <li><strong>Vocal Delivery:</strong> "aggressive flow", "melodic hook"</li>
+                        <li><strong>Production:</strong> "high-fidelity", "studio-quality"</li>
+                    </ul>
+                </div>
+                
+                <div class="guidance-section">
+                    <h4>Lyrics Structure</h4>
+                    <ul>
+                        <li><code>[Intro]</code>, <code>[Verse]</code>, <code>[Chorus]</code>, <code>[Bridge]</code>, <code>[Outro]</code></li>
+                        <li>Line breaks for pauses</li>
+                        <li>CAPS for intensity</li>
+                        <li>Ellipses <code>...</code> for dramatic pauses</li>
+                    </ul>
+                </div>
+                
+                <div class="guidance-section">
+                    <h4>CFG Scale (Prompt Strength)</h4>
+                    <ul>
+                        <li><strong>1.5-2.0:</strong> Natural genres (pop rap, melodic, jazz rap)</li>
+                        <li><strong>2.0-2.5:</strong> Balanced (trap, hip hop, boom bap)</li>
+                        <li><strong>2.5-4.0:</strong> Aggressive (phonk, drill, industrial)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script>
         const projectId = "{{ project.id }}";
+        
+        function setupCounter(inputId, counterId, limit) {
+            const input = document.getElementById(inputId);
+            const counter = document.getElementById(counterId);
+            if (!input || !counter) return;
+            
+            function updateCounter() {
+                const len = input.value.length;
+                counter.textContent = `${len} / ${limit} chars`;
+                counter.classList.remove('warning', 'error');
+                if (len > limit * 1.2) counter.classList.add('error');
+                else if (len > limit) counter.classList.add('warning');
+            }
+            
+            input.addEventListener('input', updateCounter);
+            updateCounter();
+        }
+        
+        setupCounter('prompt-text', 'promptCounter', 500);
+        setupCounter('lyrics-text', 'lyricsCounter', 1500);
+        setupCounter('neuro-effects', 'neuroCounter', 300);
+        setupCounter('neurochemical-effects', 'neurochemCounter', 300);
+        setupCounter('musical-effects', 'musicalCounter', 300);
+        
+        function toggleAdvanced() {
+            const content = document.getElementById('advancedFields');
+            const btn = document.querySelector('.collapsible-toggle');
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                btn.textContent = 'Show Advanced Fields';
+            } else {
+                content.classList.add('expanded');
+                btn.textContent = 'Hide Advanced Fields';
+            }
+        }
+        
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal(modal.id);
+            });
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.active').forEach(m => closeModal(m.id));
+            }
+        });
+        
+        async function optimizeSeed() {
+            const btn = document.getElementById('optimizeBtn');
+            const loading = document.getElementById('optimizeLoading');
+            
+            btn.style.display = 'none';
+            loading.classList.add('active');
+            
+            const seedData = {
+                prompt_text: document.getElementById('prompt-text').value,
+                lyrics_text: document.getElementById('lyrics-text').value,
+                neuro_effects: document.getElementById('neuro-effects').value,
+                neurochemical_effects: document.getElementById('neurochemical-effects').value,
+                musical_effects: document.getElementById('musical-effects').value,
+                genre: "{{ project.genre }}",
+                mood: "{{ project.mood }}",
+                bpm: {{ project.bpm }}
+            };
+            
+            try {
+                const response = await fetch('/api/optimize-seed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(seedData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.prompt_text) document.getElementById('prompt-text').value = result.prompt_text;
+                    if (result.lyrics_text) document.getElementById('lyrics-text').value = result.lyrics_text;
+                    if (result.neuro_effects) document.getElementById('neuro-effects').value = result.neuro_effects;
+                    if (result.neurochemical_effects) document.getElementById('neurochemical-effects').value = result.neurochemical_effects;
+                    if (result.musical_effects) document.getElementById('musical-effects').value = result.musical_effects;
+                    
+                    document.querySelectorAll('.seed-component textarea').forEach(ta => {
+                        ta.dispatchEvent(new Event('input'));
+                    });
+                    
+                    alert('Seed optimized!');
+                } else {
+                    alert('Optimization failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Optimization failed: ' + err.message);
+            } finally {
+                btn.style.display = '';
+                loading.classList.remove('active');
+            }
+        }
         
         function showLoading(message) {
             document.getElementById('loading-message').textContent = message;
@@ -156,18 +630,33 @@
         }
         
         async function saveSeed() {
-            const seedText = document.getElementById('seed-text').value;
+            const seedText = [
+                document.getElementById('prompt-text').value,
+                document.getElementById('lyrics-text').value,
+                document.getElementById('neuro-effects').value,
+                document.getElementById('neurochemical-effects').value,
+                document.getElementById('musical-effects').value
+            ].filter(Boolean).join('\n\n---\n\n');
+            
             await fetch(`/api/project/${projectId}/seed`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({seed_text: seedText})
             });
+            alert('Seed saved!');
         }
         
         async function generateLyrics() {
-            const seedText = document.getElementById('seed-text').value;
+            const seedText = [
+                document.getElementById('prompt-text').value,
+                document.getElementById('lyrics-text').value,
+                document.getElementById('neuro-effects').value,
+                document.getElementById('neurochemical-effects').value,
+                document.getElementById('musical-effects').value
+            ].filter(Boolean).join('\n\n');
+            
             if (!seedText.trim()) {
-                alert('Please enter a creative brief first');
+                alert('Please enter some seed content first');
                 return;
             }
             
