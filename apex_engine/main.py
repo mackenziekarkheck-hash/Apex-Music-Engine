@@ -34,24 +34,39 @@ def print_banner():
 
 def check_environment():
     """Check and report on the environment."""
+    try:
+        from colorama import init, Fore, Style
+        init()
+        YELLOW = Fore.YELLOW
+        GREEN = Fore.GREEN
+        RED = Fore.RED
+        CYAN = Fore.CYAN
+        RESET = Style.RESET_ALL
+    except ImportError:
+        YELLOW = GREEN = RED = CYAN = RESET = ""
+    
     print("\n[Environment Check]")
     print("-" * 40)
     print(f"Python Version: {sys.version.split()[0]}")
     print(f"Working Directory: {os.getcwd()}")
     
-    optional_libs = {
+    core_libs = {
+        'pronouncing': 'CMU Dictionary phonetic analysis',
+        'syllables': 'Accurate syllable counting',
         'librosa': 'Audio DSP analysis',
         'numpy': 'Numerical operations',
-        'requests': 'API communication'
+        'soundfile': 'Audio file I/O',
     }
     
-    print("\nOptional Dependencies:")
-    for lib, purpose in optional_libs.items():
+    print("\nCore Dependencies:")
+    all_core_available = True
+    for lib, purpose in core_libs.items():
         try:
             __import__(lib)
-            status = "✓ Available"
+            status = f"{GREEN}✓ Available{RESET}"
         except ImportError:
-            status = "✗ Not installed"
+            status = f"{RED}✗ Not installed{RESET}"
+            all_core_available = False
         print(f"  {lib}: {status} ({purpose})")
     
     api_keys = {
@@ -59,12 +74,35 @@ def check_environment():
         'OPENAI_API_KEY': 'OpenAI LLM'
     }
     
+    simulation_mode = False
     print("\nAPI Keys:")
     for key, service in api_keys.items():
-        status = "✓ Set" if os.environ.get(key) else "✗ Not set (simulation mode)"
+        if os.environ.get(key):
+            status = f"{GREEN}✓ Set{RESET}"
+        else:
+            status = f"{YELLOW}✗ Not set{RESET}"
+            simulation_mode = True
         print(f"  {service}: {status}")
     
     print("-" * 40)
+    
+    if simulation_mode:
+        print(f"""
+{YELLOW}╔══════════════════════════════════════════════════════════════╗
+║                    SIMULATION MODE ACTIVE                      ║
+╠══════════════════════════════════════════════════════════════╣
+║  API keys not configured. The engine will run in simulation   ║
+║  mode with synthetic responses.                               ║
+║                                                                ║
+║  To enable full functionality, set these environment vars:    ║
+║    - SONAUTO_API_KEY: For audio generation                    ║
+║    - OPENAI_API_KEY: For LLM-based lyric generation           ║
+║                                                                ║
+║  Simulation mode is useful for development and testing.       ║
+╚══════════════════════════════════════════════════════════════╝{RESET}
+""")
+    else:
+        print(f"\n{GREEN}All systems operational. Ready for production use.{RESET}\n")
 
 
 def run_demo():
