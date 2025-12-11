@@ -10,8 +10,13 @@ This agent analyzes the rhythmic "feel" of the audio:
 Reference: Syncopation Index from "Neuro-Acoustic Optimization"
 """
 
-from typing import Dict, Any, List, Optional
+from __future__ import annotations
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 import os
+
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy import ndarray as NDArray
 
 from ..agent_base import AnalysisAgent, AgentRole, AgentResult
 

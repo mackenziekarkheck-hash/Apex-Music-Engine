@@ -13,8 +13,13 @@ Key Responsibilities:
 Reference: Section 3.3 "The Flow Supervisor" from framework documentation
 """
 
-from typing import Dict, Any, List, Optional, Tuple
+from __future__ import annotations
+from typing import Dict, Any, List, Optional, Tuple, TYPE_CHECKING
 import os
+
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy import ndarray as NDArray
 
 from ..agent_base import AnalysisAgent, AgentRole, AgentResult
 

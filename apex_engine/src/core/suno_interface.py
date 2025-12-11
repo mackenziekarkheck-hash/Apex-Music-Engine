@@ -15,7 +15,22 @@ import os
 import time
 import json
 
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import requests
+
 from ..agents.agent_base import GenerativeAgent, AgentRole, AgentResult
+
+
+def _is_retryable_error(exception: Exception) -> bool:
+    """Check if an exception should trigger a retry."""
+    if isinstance(exception, requests.exceptions.Timeout):
+        return True
+    if isinstance(exception, requests.exceptions.ConnectionError):
+        return True
+    if isinstance(exception, requests.exceptions.HTTPError):
+        if hasattr(exception, 'response') and exception.response is not None:
+            return exception.response.status_code in (429, 500, 502, 503, 504)
+    return False
 
 
 class SonautoOperator(GenerativeAgent):
@@ -253,10 +268,14 @@ class SonautoOperator(GenerativeAgent):
         
         return tags[:5]
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        retry=retry_if_exception_type((requests.exceptions.Timeout, requests.exceptions.ConnectionError)),
+        reraise=True
+    )
     def _call_generation_api(self, payload: Dict[str, Any], api_key: str) -> Dict[str, Any]:
-        """Call the Sonauto generation API."""
-        import requests
-        
+        """Call the Sonauto generation API with retry logic."""
         headers = {
             'Authorization': f'Bearer {api_key}',
             'Content-Type': 'application/json'
@@ -274,10 +293,14 @@ class SonautoOperator(GenerativeAgent):
         
         return self._poll_for_completion(task_id, api_key)
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        retry=retry_if_exception_type((requests.exceptions.Timeout, requests.exceptions.ConnectionError)),
+        reraise=True
+    )
     def _call_inpainting_api(self, payload: Dict[str, Any], api_key: str) -> Dict[str, Any]:
-        """Call the Sonauto inpainting API."""
-        import requests
-        
+        """Call the Sonauto inpainting API with retry logic."""
         headers = {
             'Authorization': f'Bearer {api_key}',
             'Content-Type': 'application/json'
@@ -327,12 +350,16 @@ class SonautoOperator(GenerativeAgent):
         
         raise TimeoutError(f"Generation timed out after {timeout} seconds")
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        retry=retry_if_exception_type((requests.exceptions.Timeout, requests.exceptions.ConnectionError)),
+        reraise=True
+    )
     def _download_audio(self, url: str) -> str:
-        """Download audio from URL to local filesystem."""
+        """Download audio from URL to local filesystem with retry logic."""
         if not url:
             return ''
-            
-        import requests
         
         os.makedirs('./output', exist_ok=True)
         local_path = f'./output/generated_{int(time.time())}.ogg'

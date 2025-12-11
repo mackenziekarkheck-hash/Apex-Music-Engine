@@ -7,3 +7,9 @@ pronouncing
 requests
 soundfile
 syllables
+colorama
+pronouncing
+python-dotenv
+requests
+tenacity
+pytest

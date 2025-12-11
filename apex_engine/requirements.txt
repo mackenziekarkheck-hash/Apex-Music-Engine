@@ -1,2 +1,34 @@
 # APEX Engine Dependencies
-# Add project dependencies here as needed
+# Core orchestration and audio analysis for algorithmic rap composition
+
+# Phonetic Analysis
+pronouncing>=0.2.0          # CMU Pronouncing Dictionary for Raplyzer protocol
+syllables>=1.0.0            # Syllable counting for flow analysis
+
+# Audio DSP & Analysis
+librosa>=0.10.1             # Beat tracking, spectral analysis, onset detection
+numpy>=1.24.0               # Numerical operations
+soundfile>=0.12.0           # Audio file I/O
+pydub>=0.25.0               # Audio format conversion and manipulation
+
+# Audio Mastering
+matchering>=2.0.6           # Reference-based automated mastering
+
+# HTTP & API
+requests>=2.28.0            # HTTP client for Sonauto API
+tenacity>=8.2.0             # Retry logic with exponential backoff
+
+# CLI & Utilities
+colorama>=0.4.6             # Terminal colors for CLI output
+python-dotenv>=1.0.0        # Environment variable management
+
+# Optional: LLM Integration (for real lyric generation)
+# langchain>=0.1.0          # LLM orchestration
+# langchain-openai>=0.0.5   # OpenAI integration
+# langgraph>=0.0.10         # Graph-based agent orchestration
+
+# Optional: Stem Separation
+# demucs>=4.0.0             # Audio source separation
+
+# Development
+# pytest>=7.0.0             # Testing framework

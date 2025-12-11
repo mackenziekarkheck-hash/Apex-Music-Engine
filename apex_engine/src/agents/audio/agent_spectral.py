@@ -10,8 +10,13 @@ This agent analyzes spectral characteristics:
 Reference: Librosa spectral features from framework documentation
 """
 
-from typing import Dict, Any, List, Optional
+from __future__ import annotations
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 import os
+
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy import ndarray as NDArray
 
 from ..agent_base import AnalysisAgent, AgentRole, AgentResult
 
@@ -27,7 +32,7 @@ class SpectralAnalyzer(AnalysisAgent):
     - Good overall spectral clarity
     
     Key Metrics:
-    - Mud Ratio: Low frequency energy buildup (250-500Hz)
+    - Mud Ratio: Low frequency energy buildup (200-400Hz)
     - Clarity Index: High frequency definition
     - Spectral Centroid: Overall brightness
     - Bandwidth: Frequency range utilization
@@ -35,9 +40,10 @@ class SpectralAnalyzer(AnalysisAgent):
     
     FREQ_BANDS = {
         'sub_bass': (20, 60),
-        'bass': (60, 250),
-        'low_mid': (250, 500),
-        'mid': (500, 2000),
+        'bass': (60, 200),
+        'mud': (200, 400),
+        'low_mid': (400, 800),
+        'mid': (800, 2000),
         'high_mid': (2000, 4000),
         'presence': (4000, 8000),
         'brilliance': (8000, 20000)
@@ -45,7 +51,7 @@ class SpectralAnalyzer(AnalysisAgent):
     
     @property
     def role(self) -> AgentRole:
-        return AgentRole.FLOW_SUPERVISOR
+        return AgentRole.SPECTRAL_ANALYZER
     
     def _validate_input(self, state: Dict[str, Any]) -> List[str]:
         """Validate input state."""

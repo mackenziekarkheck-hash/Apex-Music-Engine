@@ -10,8 +10,13 @@ chills response triggered by specific acoustic features:
 Reference: Section 4.1 "The Frisson Index" from framework documentation
 """
 
-from typing import Dict, Any, List, Optional
+from __future__ import annotations
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 import os
+
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy import ndarray as NDArray
 
 from ..agent_base import AnalysisAgent, AgentRole, AgentResult
 

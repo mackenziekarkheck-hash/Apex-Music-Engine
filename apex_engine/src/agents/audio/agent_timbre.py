@@ -10,8 +10,13 @@ This agent analyzes vocal timbre characteristics:
 Reference: Vocal texture analysis from framework documentation
 """
 
-from typing import Dict, Any, List, Optional
+from __future__ import annotations
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 import os
+
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy import ndarray as NDArray
 
 from ..agent_base import AnalysisAgent, AgentRole, AgentResult
 
@@ -33,7 +38,7 @@ class TimbreAnalyzer(AnalysisAgent):
     
     @property
     def role(self) -> AgentRole:
-        return AgentRole.MIX_ENGINEER
+        return AgentRole.TIMBRE_ANALYZER
     
     def _validate_input(self, state: Dict[str, Any]) -> List[str]:
         """Validate input state."""

@@ -31,6 +31,10 @@ class AgentRole(Enum):
     FRISSON_DETECTOR = "frisson_detector"
     RHYME_ANALYZER = "rhyme_analyzer"
     GROOVE_ANALYZER = "groove_analyzer"
+    TIMBRE_ANALYZER = "timbre_analyzer"
+    SPECTRAL_ANALYZER = "spectral_analyzer"
+    CONTEXT_ANALYZER = "context_analyzer"
+    CULTURAL_ANALYST = "cultural_analyst"
 
 
 @dataclass
@@ -53,17 +57,17 @@ class AgentResult:
         cls, 
         state_updates: Dict[str, Any], 
         execution_time_ms: float = 0,
-        warnings: List[str] = None,
-        metadata: Dict[str, Any] = None
+        warnings: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None
     ) -> 'AgentResult':
         """Create a successful result."""
         return cls(
             success=True,
             state_updates=state_updates,
             errors=[],
-            warnings=warnings or [],
+            warnings=warnings if warnings is not None else [],
             execution_time_ms=execution_time_ms,
-            metadata=metadata or {}
+            metadata=metadata if metadata is not None else {}
         )
     
     @classmethod
@@ -71,17 +75,17 @@ class AgentResult:
         cls, 
         errors: List[str], 
         execution_time_ms: float = 0,
-        state_updates: Dict[str, Any] = None,
-        metadata: Dict[str, Any] = None
+        state_updates: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None
     ) -> 'AgentResult':
         """Create a failure result."""
         return cls(
             success=False,
-            state_updates=state_updates or {},
+            state_updates=state_updates if state_updates is not None else {},
             errors=errors,
             warnings=[],
             execution_time_ms=execution_time_ms,
-            metadata=metadata or {}
+            metadata=metadata if metadata is not None else {}
         )
 
 
@@ -315,7 +319,7 @@ class GenerativeAgent(BaseAgent):
         """
         import time
         
-        last_exception = None
+        last_exception: Optional[Exception] = None
         for attempt in range(self.max_retries):
             try:
                 return operation(*args, **kwargs)
@@ -325,4 +329,6 @@ class GenerativeAgent(BaseAgent):
                 if attempt < self.max_retries - 1:
                     time.sleep(self.retry_delay * (2 ** attempt))
                     
-        raise last_exception
+        if last_exception is not None:
+            raise last_exception
+        raise RuntimeError("Retry logic failed without capturing exception")
