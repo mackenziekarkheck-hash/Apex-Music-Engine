@@ -255,7 +255,7 @@ class APEXOrchestrator:
         """
         prompt = state.get('user_prompt', '').lower()
         
-        plan = {
+        plan: Dict[str, Any] = {
             'bpm': self._extract_bpm(prompt),
             'subgenre': self._extract_subgenre(prompt),
             'mood': self._extract_mood(prompt),
@@ -269,7 +269,7 @@ class APEXOrchestrator:
             }
         }
         
-        state['structured_plan'] = plan
+        state['structured_plan'] = plan  # type: ignore[typeddict-item]
         state['status'] = GenerationStatus.DRAFTING.value
         
         self.logger.info(f"Created plan: {plan}")
