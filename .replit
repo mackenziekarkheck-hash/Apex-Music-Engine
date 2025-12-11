@@ -1,0 +1,29 @@
+modules = ["python-3.11"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Run APEX Engine"
+
+[[workflows.workflow]]
+name = "Run APEX Engine"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python apex_engine/main.py"
+
+[workflows.workflow.metadata]
+outputType = "console"

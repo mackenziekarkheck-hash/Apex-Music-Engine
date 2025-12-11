@@ -1,2 +1,2 @@
-# Placeholder for requirements.txt
-# Description: Dependencies
+# APEX Engine Dependencies
+# Add project dependencies here as needed
