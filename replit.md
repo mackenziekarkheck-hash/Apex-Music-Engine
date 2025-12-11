@@ -55,8 +55,25 @@ apex_engine/
 │       ├── api_client.py             # HTTP client utilities
 │       └── report_generator.py       # Analysis reports
 ├── tests/                # Test suite
+├── web/                  # Flask Web UI
+│   ├── app.py                    # Flask application
+│   ├── templates/                # Jinja2 templates
+│   │   ├── index.html            # Project list
+│   │   ├── new_project.html      # Project creation form
+│   │   ├── workspace.html        # Main editing workspace
+│   │   └── error.html            # Error page
+│   └── static/css/style.css      # Styling
 ├── main.py               # CLI entry point
 └── requirements.txt      # Dependencies
+
+projects/                 # Song project directories (created at runtime)
+└── <project-id>/
+    ├── config.json               # Project settings
+    ├── seed.txt                  # Creative brief
+    ├── iterations/               # Versioned lyrics with scoring
+    │   └── v1/, v2/, v3/...
+    ├── approved/                 # Final approved lyrics + API payload
+    └── output/                   # Generated audio files
 ```
 
 ## Key Components
@@ -199,6 +216,20 @@ cd apex_engine && python -m pytest tests/test_fal_models.py tests/test_master.py
 - **Lyrical Analysis**: Rhyme detection, syllable counting, flow consistency
 
 ## Recent Changes
+
+### December 11, 2025: Flask Web UI & Project Management
+- Added Flask web application for project-based song creation workflow
+- Created ProjectManager class for file-based project organization
+- Implemented GPT-4o client wrapper (LLMClient) for lyric generation and iteration
+- Built project workspace UI with:
+  - Creative brief/seed input
+  - GPT-4o lyric generation and iteration
+  - Scoring dashboard (rhyme density, flow consistency, PVS)
+  - Recommendations for improvement
+  - API payload preview before generation
+  - Explicit approval gate before Sonauto calls
+- Projects stored in `projects/<project-id>/` with versioned iterations
+- Fixed main.py to recognize FAL_KEY as valid Sonauto API key
 
 ### December 11, 2025: fal_client SDK Migration
 - **MAJOR**: Migrated from raw HTTP requests to official `fal_client` SDK

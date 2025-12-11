@@ -16,22 +16,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Run APEX Engine"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "APEX Web UI"
-
-[[workflows.workflow]]
-name = "Run APEX Engine"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python apex_engine/main.py"
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[workflows.workflow]]
 name = "APEX Web UI"
