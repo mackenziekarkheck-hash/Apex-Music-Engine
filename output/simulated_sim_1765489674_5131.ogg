@@ -1,0 +1,15 @@
+# Simulated audio file
+# Payload: {
+  "prompt": "Test prompt. trap style. energetic atmosphere. with 808, synth. high fidelity. studio quality",
+  "lyrics": "[Intro]\n(Yeah, uh-huh)\nCheck it out, one two\n\n[Verse 1]\nDigital signals flowing through the night\nMy rhymes are sharp and my flow is tight\nProcessing data at the speed of light\nEvery bar I spit is dynamite\n\n[Chorus]\nThis is the future sound we make\nEvery beat drop for music's sake\nAutomated flow, no mistake\nThis is the path that we will take\n\n[Verse 2]\nAlgorithm vibes in every line\nNeural networks making beats divine\nStructure meets the creative mind\nLeaving all the weak flows behind\n\n[Outro]\n(Yeah, yeah)\nAPEX Engine, we out\n",
+  "tags": [
+    "rap",
+    "hip hop",
+    "trap",
+    "energetic"
+  ],
+  "instrumental": false,
+  "balance_strength": 0.75,
+  "num_songs": 2,
+  "bpm": 100
+}

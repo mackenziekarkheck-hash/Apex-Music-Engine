@@ -114,6 +114,21 @@ For full audio analysis capabilities:
 - `numpy` - Numerical operations
 - `soundfile` - Audio file I/O
 
+## Testing
+
+### Run Tests
+```bash
+python apex_engine/tests/test_master.py    # Integration tests (12 tests)
+python apex_engine/tests/test_lyrical.py   # Lyrical analysis tests (13 tests)
+```
+
+### Test Coverage
+- **Workflow Integration**: Orchestrator creation, simulation mode, iteration limits
+- **PVS Calculation**: Formula accuracy, tier assignment, recommendations
+- **State Management**: Initial state creation, validation
+- **Agent Base**: Success/failure result patterns
+- **Lyrical Analysis**: Rhyme detection, syllable counting, flow consistency
+
 ## Recent Changes
 - December 2025: Complete framework implementation
   - Implemented full agent hierarchy (15+ specialized agents)
@@ -122,6 +137,7 @@ For full audio analysis capabilities:
   - Implemented frisson detection and virality prediction
   - Created comprehensive CLI with demo/interactive modes
   - Added simulation mode for development without API keys
+  - Created comprehensive test suite (25 unit/integration tests)
 
 ## Architecture Notes
 - **State Management**: TypedDict-based RapGenerationState for type-safe agent communication
