@@ -1,2 +1,122 @@
-# Placeholder for weights.json
-# Description: Weighting logic for PVS Algorithm
+{
+  "pvs_formula": {
+    "description": "PVS = (W_Ly * S_Ly) + (W_Au * S_Au) + (W_Cul * S_Cul) + epsilon",
+    "epsilon_range": [0, 0.05],
+    "epsilon_description": "Chaos factor (0-5% random for happy accidents)"
+  },
+  "category_weights": {
+    "lyrical": 0.40,
+    "audio": 0.35,
+    "cultural": 0.25
+  },
+  "lyrical_weights": {
+    "rhyme_factor": {
+      "weight": 0.30,
+      "description": "RF = sum(LCS_i) / N, elite > 1.0",
+      "thresholds": {
+        "elite": 1.0,
+        "lyrical": 0.4,
+        "vibe": 0.2,
+        "substandard": 0.0
+      }
+    },
+    "multisyllabic_density": {
+      "weight": 0.20,
+      "description": "Ratio of multi-syllabic rhymes to total rhymes",
+      "optimal_range": [0.3, 0.6]
+    },
+    "flow_consistency": {
+      "weight": 0.20,
+      "description": "Syllable count variance (inverse)",
+      "optimal_range": [0.6, 0.9]
+    },
+    "quotability": {
+      "weight": 0.15,
+      "description": "Memorable punchlines and hooks",
+      "scoring": "meme_potential + caption_capability"
+    },
+    "plosive_density_index": {
+      "weight": 0.15,
+      "description": "PDI for rhythmic punch",
+      "optimal_range": [0.12, 0.18]
+    }
+  },
+  "audio_weights": {
+    "frisson_score": {
+      "weight": 0.30,
+      "description": "Composite psychoacoustic chill potential",
+      "formula": "0.4*dynamic + 0.3*brightness + 0.2*contrast + 0.1*surprise"
+    },
+    "syncopation_index": {
+      "weight": 0.25,
+      "description": "Longuet-Higgins model syncopation",
+      "optimal_range": [15, 30],
+      "penalty_zones": {
+        "monotonous": [0, 5],
+        "chaotic": [50, 100]
+      }
+    },
+    "pocket_alignment": {
+      "weight": 0.20,
+      "description": "How well onsets align with beat grid",
+      "optimal_range": [0.7, 1.0]
+    },
+    "spectral_clarity": {
+      "weight": 0.15,
+      "description": "Vocal clarity vs. frequency masking",
+      "mud_ratio_penalty": {
+        "range_hz": [200, 400],
+        "threshold": 0.3
+      }
+    },
+    "dynamic_range": {
+      "weight": 0.10,
+      "description": "RMS variance for energy",
+      "optimal_range": [0.15, 0.35]
+    }
+  },
+  "cultural_weights": {
+    "trend_alignment": {
+      "weight": 0.40,
+      "description": "How well track aligns with current trends",
+      "bpm_inflation_index": "+2 BPM per year since 2018"
+    },
+    "meme_potential": {
+      "weight": 0.35,
+      "description": "Quotability and shareability",
+      "factors": ["catchphrase", "unusual_flow", "memorable_line"]
+    },
+    "originality": {
+      "weight": 0.25,
+      "description": "Derivative rate (lower = more original)",
+      "optimal_derivative_rate": [0.3, 0.6]
+    }
+  },
+  "quality_thresholds": {
+    "rhyme_factor_min": 0.2,
+    "onset_confidence_min": 0.6,
+    "frisson_score_min": 0.3,
+    "syncopation_min": 10,
+    "syncopation_max": 40,
+    "pocket_alignment_min": 0.5,
+    "pvs_min_for_release": 0.5
+  },
+  "genre_weight_adjustments": {
+    "trap": {
+      "syncopation_weight_boost": 0.1,
+      "plosive_weight_boost": 0.05
+    },
+    "boom_bap": {
+      "rhyme_factor_weight_boost": 0.1,
+      "flow_consistency_weight_boost": 0.05
+    },
+    "conscious": {
+      "quotability_weight_boost": 0.1,
+      "rhyme_factor_weight_boost": 0.05
+    },
+    "pop_rap": {
+      "meme_potential_weight_boost": 0.15,
+      "frisson_score_weight_boost": 0.05
+    }
+  }
+}

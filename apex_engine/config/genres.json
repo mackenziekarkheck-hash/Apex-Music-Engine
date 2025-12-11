@@ -1,2 +1,194 @@
-# Placeholder for genres.json
-# Description: Definitions: BPM, Key, & "Genre Strictness" (Swing vs. Quantize)
+{
+  "trap": {
+    "bpm_range": [130, 160],
+    "default_bpm": 140,
+    "syllable_target": 14,
+    "syllable_tolerance": 2,
+    "quantization_strictness": 0.9,
+    "swing": 0.0,
+    "syncopation_target": [20, 35],
+    "tags": ["trap", "808", "hi-hats", "modern"],
+    "mood_modifiers": ["aggressive", "dark", "energetic"],
+    "vocal_texture": "aggressive",
+    "instrumentation": {
+      "primary": ["808 bass", "hi-hats", "snare"],
+      "secondary": ["synth", "strings"],
+      "samples": false
+    },
+    "reference_artists": ["Future", "Young Thug", "Travis Scott"],
+    "characteristics": {
+      "triplet_flow": true,
+      "double_time": true,
+      "heavy_bass": true,
+      "vocal_effects": ["autotune", "reverb"]
+    }
+  },
+  "boom_bap": {
+    "bpm_range": [85, 95],
+    "default_bpm": 90,
+    "syllable_target": 11,
+    "syllable_tolerance": 2,
+    "quantization_strictness": 0.6,
+    "swing": 0.15,
+    "syncopation_target": [15, 25],
+    "tags": ["boom bap", "sample", "vinyl", "90s", "old school"],
+    "mood_modifiers": ["chill", "conscious", "nostalgic"],
+    "vocal_texture": "natural",
+    "instrumentation": {
+      "primary": ["sampled drums", "bass", "piano"],
+      "secondary": ["horns", "strings"],
+      "samples": true
+    },
+    "reference_artists": ["Nas", "Wu-Tang", "A Tribe Called Quest"],
+    "characteristics": {
+      "triplet_flow": false,
+      "double_time": false,
+      "heavy_bass": false,
+      "vocal_effects": []
+    }
+  },
+  "drill": {
+    "bpm_range": [140, 145],
+    "default_bpm": 142,
+    "syllable_target": 12,
+    "syllable_tolerance": 2,
+    "quantization_strictness": 0.85,
+    "swing": 0.05,
+    "syncopation_target": [18, 30],
+    "tags": ["drill", "dark", "aggressive", "UK drill", "Chicago drill"],
+    "mood_modifiers": ["aggressive", "dark", "menacing"],
+    "vocal_texture": "aggressive",
+    "instrumentation": {
+      "primary": ["808 bass", "snare rolls", "hi-hats"],
+      "secondary": ["piano", "strings"],
+      "samples": false
+    },
+    "reference_artists": ["Pop Smoke", "Chief Keef", "Central Cee"],
+    "characteristics": {
+      "triplet_flow": false,
+      "double_time": true,
+      "heavy_bass": true,
+      "vocal_effects": ["slight reverb"]
+    }
+  },
+  "pop_rap": {
+    "bpm_range": [90, 120],
+    "default_bpm": 105,
+    "syllable_target": 10,
+    "syllable_tolerance": 3,
+    "quantization_strictness": 0.7,
+    "swing": 0.1,
+    "syncopation_target": [12, 22],
+    "tags": ["pop rap", "radio", "commercial", "catchy"],
+    "mood_modifiers": ["upbeat", "party", "feel-good"],
+    "vocal_texture": "melodic",
+    "instrumentation": {
+      "primary": ["synth bass", "drums", "synth"],
+      "secondary": ["guitar", "piano"],
+      "samples": false
+    },
+    "reference_artists": ["Drake", "Post Malone", "Jack Harlow"],
+    "characteristics": {
+      "triplet_flow": false,
+      "double_time": false,
+      "heavy_bass": false,
+      "vocal_effects": ["autotune light", "compression"]
+    }
+  },
+  "cloud_rap": {
+    "bpm_range": [65, 80],
+    "default_bpm": 70,
+    "syllable_target": 8,
+    "syllable_tolerance": 3,
+    "quantization_strictness": 0.5,
+    "swing": 0.2,
+    "syncopation_target": [10, 20],
+    "tags": ["cloud rap", "ambient", "dreamy", "ethereal"],
+    "mood_modifiers": ["chill", "dreamy", "melancholic"],
+    "vocal_texture": "airy",
+    "instrumentation": {
+      "primary": ["ambient pads", "soft 808", "reverb"],
+      "secondary": ["bells", "synth"],
+      "samples": true
+    },
+    "reference_artists": ["Yung Lean", "Bladee", "A$AP Rocky"],
+    "characteristics": {
+      "triplet_flow": false,
+      "double_time": false,
+      "heavy_bass": false,
+      "vocal_effects": ["heavy reverb", "delay", "pitch shift"]
+    }
+  },
+  "conscious": {
+    "bpm_range": [85, 100],
+    "default_bpm": 92,
+    "syllable_target": 12,
+    "syllable_tolerance": 2,
+    "quantization_strictness": 0.65,
+    "swing": 0.12,
+    "syncopation_target": [15, 25],
+    "tags": ["conscious", "lyrical", "soulful", "message"],
+    "mood_modifiers": ["conscious", "uplifting", "introspective"],
+    "vocal_texture": "natural",
+    "instrumentation": {
+      "primary": ["soul samples", "live drums", "bass"],
+      "secondary": ["piano", "strings", "choir"],
+      "samples": true
+    },
+    "reference_artists": ["Kendrick Lamar", "J. Cole", "Common"],
+    "characteristics": {
+      "triplet_flow": false,
+      "double_time": false,
+      "heavy_bass": false,
+      "vocal_effects": []
+    }
+  },
+  "aggressive": {
+    "bpm_range": [130, 150],
+    "default_bpm": 140,
+    "syllable_target": 14,
+    "syllable_tolerance": 2,
+    "quantization_strictness": 0.85,
+    "swing": 0.0,
+    "syncopation_target": [22, 38],
+    "tags": ["aggressive", "hard", "intense", "raw"],
+    "mood_modifiers": ["aggressive", "angry", "intense"],
+    "vocal_texture": "aggressive",
+    "instrumentation": {
+      "primary": ["heavy 808", "hard snare", "distortion"],
+      "secondary": ["synth", "noise"],
+      "samples": false
+    },
+    "reference_artists": ["DMX", "Denzel Curry", "XXXTENTACION"],
+    "characteristics": {
+      "triplet_flow": true,
+      "double_time": true,
+      "heavy_bass": true,
+      "vocal_effects": ["distortion", "shout"]
+    }
+  },
+  "default": {
+    "bpm_range": [80, 140],
+    "default_bpm": 100,
+    "syllable_target": 12,
+    "syllable_tolerance": 3,
+    "quantization_strictness": 0.7,
+    "swing": 0.1,
+    "syncopation_target": [15, 30],
+    "tags": ["rap", "hip hop"],
+    "mood_modifiers": [],
+    "vocal_texture": "natural",
+    "instrumentation": {
+      "primary": ["drums", "bass"],
+      "secondary": [],
+      "samples": false
+    },
+    "reference_artists": [],
+    "characteristics": {
+      "triplet_flow": false,
+      "double_time": false,
+      "heavy_bass": false,
+      "vocal_effects": []
+    }
+  }
+}

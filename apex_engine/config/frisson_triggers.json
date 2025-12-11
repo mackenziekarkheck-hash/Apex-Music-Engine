@@ -1,2 +1,88 @@
-# Placeholder for frisson_triggers.json
-# Description: Spectral shapes (e.g., 300Hz sweeps) known to cause chills
+{
+  "description": "Spectral and temporal patterns known to trigger frisson (psychoacoustic chills)",
+  "dynamic_surge_triggers": {
+    "description": "Sudden loudness increases that trigger the startle/chill response",
+    "delta_rms_threshold": 0.15,
+    "rise_time_ms": [50, 500],
+    "optimal_frequency_hz": [100, 3000],
+    "examples": [
+      "808 drop after breakdown",
+      "vocal entry after instrumental intro",
+      "beat switch with energy increase"
+    ]
+  },
+  "spectral_brightness_triggers": {
+    "description": "High-frequency expansion that creates 'opening up' sensation",
+    "centroid_increase_threshold": 0.5,
+    "frequency_range_hz": [2000, 8000],
+    "slope_duration_ms": [200, 2000],
+    "examples": [
+      "filter sweep opening before drop",
+      "cymbal wash",
+      "vocal 'aaah' ascending"
+    ]
+  },
+  "spectral_contrast_triggers": {
+    "description": "Energy peaks vs valleys for clarity and definition",
+    "contrast_threshold": 15,
+    "frequency_bands": [
+      {"name": "sub_bass", "range_hz": [20, 60]},
+      {"name": "bass", "range_hz": [60, 250]},
+      {"name": "low_mid", "range_hz": [250, 500]},
+      {"name": "mid", "range_hz": [500, 2000]},
+      {"name": "high_mid", "range_hz": [2000, 4000]},
+      {"name": "presence", "range_hz": [4000, 6000]},
+      {"name": "brilliance", "range_hz": [6000, 20000]}
+    ]
+  },
+  "surprise_event_triggers": {
+    "description": "Rhythmic expectation violations that trigger dopamine release",
+    "off_beat_accent_strength": 1.5,
+    "missing_beat_threshold": 0.5,
+    "syncopation_optimal_range": [15, 30],
+    "examples": [
+      "snare on off-beat",
+      "vocal emphasis on weak beat",
+      "rest where beat expected"
+    ]
+  },
+  "harmonic_triggers": {
+    "description": "Chord progressions and harmonic moments that trigger chills",
+    "deceptive_cadence": true,
+    "major_to_minor_shift": true,
+    "tritone_resolution": true,
+    "suspension_resolution": true
+  },
+  "vocal_triggers": {
+    "description": "Vocal characteristics that enhance frisson",
+    "vibrato_frequency_hz": [5, 7],
+    "belt_frequency_hz": [300, 500],
+    "whisper_to_belt_transition": true,
+    "harmonic_richness_threshold": 0.7
+  },
+  "temporal_placement": {
+    "description": "Where in the track frisson triggers are most effective",
+    "optimal_positions": [
+      {"name": "first_chorus_drop", "percentage": [0.20, 0.30]},
+      {"name": "bridge_buildup", "percentage": [0.60, 0.70]},
+      {"name": "final_chorus", "percentage": [0.80, 0.90]}
+    ],
+    "buildup_duration_ms": [2000, 8000],
+    "tension_release_pattern": "tension_tension_release"
+  },
+  "composite_score_formula": {
+    "weights": {
+      "dynamic_surge": 0.40,
+      "spectral_brightness": 0.30,
+      "spectral_contrast": 0.20,
+      "surprise_events": 0.10
+    },
+    "normalization": "min_max_to_0_1",
+    "thresholds": {
+      "low": 0.3,
+      "moderate": 0.5,
+      "high": 0.7,
+      "exceptional": 0.85
+    }
+  }
+}
