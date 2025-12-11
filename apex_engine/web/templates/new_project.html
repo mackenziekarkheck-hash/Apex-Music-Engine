@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Project - APEX Engine</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="{{ url_for('index') }}" class="back-link">&larr; Back to Projects</a>
+            <h1>Create New Project</h1>
+        </header>
+        
+        <main>
+            <form method="POST" class="project-form">
+                <div class="form-group">
+                    <label for="name">Project Name</label>
+                    <input type="text" id="name" name="name" required placeholder="My Trap Banger">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="genre">Genre</label>
+                        <select id="genre" name="genre">
+                            <option value="trap">Trap</option>
+                            <option value="drill">Drill</option>
+                            <option value="phonk">Phonk</option>
+                            <option value="boom bap">Boom Bap</option>
+                            <option value="cloud rap">Cloud Rap</option>
+                            <option value="emo rap">Emo Rap</option>
+                            <option value="conscious rap">Conscious Rap</option>
+                            <option value="pop rap">Pop Rap</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bpm">BPM</label>
+                        <input type="number" id="bpm" name="bpm" value="140" min="60" max="200">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mood">Mood</label>
+                        <select id="mood" name="mood">
+                            <option value="aggressive">Aggressive</option>
+                            <option value="energetic">Energetic</option>
+                            <option value="dark">Dark</option>
+                            <option value="melancholic">Melancholic</option>
+                            <option value="chill">Chill</option>
+                            <option value="hype">Hype</option>
+                            <option value="introspective">Introspective</option>
+                            <option value="triumphant">Triumphant</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tags">Additional Tags (comma-separated)</label>
+                    <input type="text" id="tags" name="tags" placeholder="808, hi-hats, autotune">
+                </div>
+                
+                <div class="form-group">
+                    <label for="seed_text">Creative Brief / Seed</label>
+                    <textarea id="seed_text" name="seed_text" rows="5" placeholder="Describe the concept, theme, or inspiration for this song. What story do you want to tell? What emotions should it evoke?"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="prompt_strength">Prompt Strength (CFG Scale)</label>
+                        <input type="range" id="prompt_strength" name="prompt_strength" min="1.0" max="4.0" step="0.1" value="2.0">
+                        <span class="range-value">2.0</span>
+                        <small>Higher = stricter genre adherence</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="balance_strength">Balance (Vocal/Instrumental)</label>
+                        <input type="range" id="balance_strength" name="balance_strength" min="0.3" max="0.9" step="0.05" value="0.7">
+                        <span class="range-value">0.7</span>
+                        <small>Higher = more vocal presence</small>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Create Project</button>
+                </div>
+            </form>
+        </main>
+    </div>
+    
+    <script>
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            const valueSpan = input.nextElementSibling;
+            input.addEventListener('input', () => {
+                valueSpan.textContent = input.value;
+            });
+        });
+    </script>
+</body>
+</html>

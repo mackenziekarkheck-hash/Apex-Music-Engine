@@ -69,20 +69,24 @@ def check_environment():
             all_core_available = False
         print(f"  {lib}: {status} ({purpose})")
     
-    api_keys = {
-        'SONAUTO_API_KEY': 'Sonauto API',
-        'OPENAI_API_KEY': 'OpenAI LLM'
-    }
-    
     simulation_mode = False
     print("\nAPI Keys:")
-    for key, service in api_keys.items():
-        if os.environ.get(key):
-            status = f"{GREEN}✓ Set{RESET}"
-        else:
-            status = f"{YELLOW}✗ Not set{RESET}"
-            simulation_mode = True
-        print(f"  {service}: {status}")
+    
+    fal_key = os.environ.get('FAL_KEY') or os.environ.get('SONAUTO_API_KEY')
+    if fal_key:
+        status = f"{GREEN}✓ Set{RESET}"
+    else:
+        status = f"{YELLOW}✗ Not set{RESET}"
+        simulation_mode = True
+    print(f"  Sonauto/Fal.ai API: {status}")
+    
+    openai_key = os.environ.get('OPENAI_API_KEY')
+    if openai_key:
+        status = f"{GREEN}✓ Set{RESET}"
+    else:
+        status = f"{YELLOW}✗ Not set{RESET}"
+        simulation_mode = True
+    print(f"  OpenAI LLM: {status}")
     
     print("-" * 40)
     
@@ -95,7 +99,7 @@ def check_environment():
 ║  mode with synthetic responses.                               ║
 ║                                                                ║
 ║  To enable full functionality, set these environment vars:    ║
-║    - SONAUTO_API_KEY: For audio generation                    ║
+║    - FAL_KEY: For Sonauto audio generation via fal.ai         ║
 ║    - OPENAI_API_KEY: For LLM-based lyric generation           ║
 ║                                                                ║
 ║  Simulation mode is useful for development and testing.       ║

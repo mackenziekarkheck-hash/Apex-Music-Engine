@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APEX Engine - Song Projects</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>APEX Engine</h1>
+            <p class="subtitle">Autonomous Aural Architectures for Algorithmic Rap</p>
+        </header>
+        
+        <nav class="actions">
+            <a href="{{ url_for('new_project') }}" class="btn btn-primary">+ New Project</a>
+        </nav>
+        
+        <main>
+            <section class="projects">
+                <h2>Song Projects</h2>
+                
+                {% if projects %}
+                <div class="project-grid">
+                    {% for project in projects %}
+                    <div class="project-card" data-status="{{ project.status }}">
+                        <div class="project-header">
+                            <h3>{{ project.name }}</h3>
+                            <span class="status-badge {{ project.status }}">{{ project.status }}</span>
+                        </div>
+                        <div class="project-meta">
+                            <span class="genre">{{ project.genre }}</span>
+                            <span class="bpm">{{ project.bpm }} BPM</span>
+                            <span class="iterations">v{{ project.current_iteration or 0 }}</span>
+                        </div>
+                        <div class="project-date">
+                            Created: {{ project.created_at[:10] }}
+                        </div>
+                        <div class="project-actions">
+                            <a href="{{ url_for('project_workspace', project_id=project.id) }}" class="btn btn-secondary">Open</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <p>No projects yet. Create your first song project to get started!</p>
+                    <a href="{{ url_for('new_project') }}" class="btn btn-primary">Create Project</a>
+                </div>
+                {% endif %}
+            </section>
+        </main>
+        
+        <footer>
+            <p>APEX Engine v0.2.0 | Sonauto + GPT-4o</p>
+        </footer>
+    </div>
+</body>
+</html>

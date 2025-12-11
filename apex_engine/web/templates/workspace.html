@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ project.name }} - APEX Engine</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container workspace">
+        <header>
+            <a href="{{ url_for('index') }}" class="back-link">&larr; Projects</a>
+            <div class="project-title">
+                <h1>{{ project.name }}</h1>
+                <span class="status-badge {{ project.status }}">{{ project.status }}</span>
+            </div>
+            <div class="project-info">
+                <span class="genre">{{ project.genre }}</span>
+                <span class="bpm">{{ project.bpm }} BPM</span>
+                <span class="mood">{{ project.mood }}</span>
+            </div>
+        </header>
+        
+        <main class="workspace-grid">
+            <section class="seed-section">
+                <h2>Creative Brief</h2>
+                <textarea id="seed-text" placeholder="Enter your creative brief / seed concept...">{{ project.seed_text or '' }}</textarea>
+                <div class="seed-actions">
+                    <button class="btn btn-secondary" onclick="saveSeed()">Save</button>
+                    <button class="btn btn-primary" onclick="generateLyrics()" id="generate-btn">
+                        Generate Lyrics
+                    </button>
+                </div>
+            </section>
+            
+            <section class="lyrics-section">
+                <div class="lyrics-header">
+                    <h2>Lyrics</h2>
+                    <div class="version-selector">
+                        <select id="version-select" onchange="loadVersion(this.value)">
+                            {% for iter in project.iterations %}
+                            <option value="{{ iter.version }}" {% if iter.version == project.current_iteration %}selected{% endif %}>
+                                v{{ iter.version }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <textarea id="lyrics-editor" placeholder="Lyrics will appear here after generation...">{% if project.iterations %}{{ project.iterations[-1].lyrics }}{% endif %}</textarea>
+                <div class="lyrics-actions">
+                    <button class="btn btn-secondary" onclick="scoreLyrics()">Score</button>
+                    <button class="btn btn-secondary" onclick="iterateLyrics()" id="iterate-btn">
+                        Iterate
+                    </button>
+                </div>
+            </section>
+            
+            <section class="scoring-section">
+                <h2>Scoring Dashboard</h2>
+                <div class="scores-grid" id="scores-display">
+                    {% if project.iterations and project.iterations[-1].scores %}
+                    {% set scores = project.iterations[-1].scores %}
+                    <div class="score-card">
+                        <div class="score-label">Rhyme Density</div>
+                        <div class="score-value">{{ "%.2f"|format(scores.rhyme_factor|default(0)) }}</div>
+                        <div class="score-bar"><div class="score-fill" style="width: {{ (scores.rhyme_factor|default(0) * 100)|int }}%"></div></div>
+                    </div>
+                    <div class="score-card">
+                        <div class="score-label">Flow Consistency</div>
+                        <div class="score-value">{{ "%.2f"|format(scores.flow_consistency|default(0)) }}</div>
+                        <div class="score-bar"><div class="score-fill" style="width: {{ (scores.flow_consistency|default(0) * 100)|int }}%"></div></div>
+                    </div>
+                    <div class="score-card">
+                        <div class="score-label">PVS Score</div>
+                        <div class="score-value">{{ "%.2f"|format(scores.pvs_score|default(0)) }}</div>
+                        <div class="score-bar"><div class="score-fill" style="width: {{ (scores.pvs_score|default(0) * 100)|int }}%"></div></div>
+                    </div>
+                    <div class="score-card tier">
+                        <div class="score-label">Tier</div>
+                        <div class="score-value tier-{{ scores.pvs_tier|default('UNKNOWN')|lower }}">{{ scores.pvs_tier|default('--') }}</div>
+                    </div>
+                    {% else %}
+                    <p class="empty-scores">Generate or score lyrics to see metrics</p>
+                    {% endif %}
+                </div>
+                
+                <div class="recommendations" id="recommendations">
+                    <h3>Recommendations</h3>
+                    <ul id="recommendations-list">
+                        <li>Generate lyrics to get recommendations</li>
+                    </ul>
+                </div>
+            </section>
+            
+            <section class="approval-section">
+                <h2>Generation</h2>
+                <div class="approval-status">
+                    {% if project.status == 'approved' %}
+                    <div class="approved-info">
+                        <p>Lyrics approved (v{{ project.approved_version }})</p>
+                        <button class="btn btn-primary" onclick="showPayloadPreview()">
+                            View API Payload
+                        </button>
+                        <button class="btn btn-success" onclick="generateAudio()">
+                            Generate Song
+                        </button>
+                    </div>
+                    {% else %}
+                    <button class="btn btn-warning" onclick="previewPayload()">
+                        Preview API Payload
+                    </button>
+                    <button class="btn btn-primary" onclick="approveLyrics()">
+                        Approve & Prepare for Generation
+                    </button>
+                    {% endif %}
+                </div>
+                
+                <div class="payload-preview" id="payload-preview" style="display: none;">
+                    <h3>API Payload</h3>
+                    <pre id="payload-content"></pre>
+                    <p class="cost-estimate">Estimated Cost: $0.075</p>
+                </div>
+                
+                {% if project.outputs %}
+                <div class="outputs">
+                    <h3>Generated Audio</h3>
+                    {% for output in project.outputs %}
+                    <div class="audio-item">
+                        <span>{{ output.filename }}</span>
+                        <audio controls src="{{ output.path }}"></audio>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </section>
+        </main>
+    </div>
+    
+    <div class="modal" id="loading-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="spinner"></div>
+            <p id="loading-message">Processing...</p>
+        </div>
+    </div>
+    
+    <script>
+        const projectId = "{{ project.id }}";
+        
+        function showLoading(message) {
+            document.getElementById('loading-message').textContent = message;
+            document.getElementById('loading-modal').style.display = 'flex';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading-modal').style.display = 'none';
+        }
+        
+        async function saveSeed() {
+            const seedText = document.getElementById('seed-text').value;
+            await fetch(`/api/project/${projectId}/seed`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({seed_text: seedText})
+            });
+        }
+        
+        async function generateLyrics() {
+            const seedText = document.getElementById('seed-text').value;
+            if (!seedText.trim()) {
+                alert('Please enter a creative brief first');
+                return;
+            }
+            
+            showLoading('Generating lyrics with GPT-4o...');
+            
+            try {
+                const response = await fetch(`/api/project/${projectId}/generate-lyrics`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({seed_text: seedText})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('lyrics-editor').value = data.lyrics;
+                    updateScores(data.scores);
+                    addVersionOption(data.version);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) {
+                alert('Request failed: ' + e.message);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function iterateLyrics() {
+            const lyrics = document.getElementById('lyrics-editor').value;
+            if (!lyrics.trim()) {
+                alert('No lyrics to iterate on');
+                return;
+            }
+            
+            showLoading('Iterating lyrics with GPT-4o...');
+            
+            try {
+                const response = await fetch(`/api/project/${projectId}/iterate`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({lyrics: lyrics})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('lyrics-editor').value = data.lyrics;
+                    updateScores(data.scores);
+                    addVersionOption(data.version);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) {
+                alert('Request failed: ' + e.message);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function scoreLyrics() {
+            const lyrics = document.getElementById('lyrics-editor').value;
+            if (!lyrics.trim()) {
+                alert('No lyrics to score');
+                return;
+            }
+            
+            showLoading('Analyzing lyrics...');
+            
+            try {
+                const response = await fetch(`/api/project/${projectId}/score`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({lyrics: lyrics})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateScores(data.scores);
+                    updateRecommendations(data.recommendations);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) {
+                alert('Request failed: ' + e.message);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function previewPayload() {
+            const lyrics = document.getElementById('lyrics-editor').value;
+            
+            try {
+                const response = await fetch(`/api/project/${projectId}/preview-payload`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({lyrics: lyrics})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('payload-content').textContent = 
+                        JSON.stringify(data.api_payload, null, 2);
+                    document.getElementById('payload-preview').style.display = 'block';
+                }
+            } catch (e) {
+                alert('Request failed: ' + e.message);
+            }
+        }
+        
+        async function approveLyrics() {
+            if (!confirm('Approve these lyrics for audio generation?')) return;
+            
+            showLoading('Approving lyrics...');
+            
+            try {
+                const response = await fetch(`/api/project/${projectId}/approve`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) {
+                alert('Request failed: ' + e.message);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function generateAudio() {
+            if (!confirm('Generate audio? This will use API credits ($0.075).')) return;
+            
+            showLoading('Generating audio with Sonauto...');
+            
+            try {
+                const response = await fetch(`/api/project/${projectId}/generate-audio`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Audio generation initiated! ' + data.message);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) {
+                alert('Request failed: ' + e.message);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function updateScores(scores) {
+            const html = `
+                <div class="score-card">
+                    <div class="score-label">Rhyme Density</div>
+                    <div class="score-value">${scores.rhyme_factor?.toFixed(2) || '--'}</div>
+                    <div class="score-bar"><div class="score-fill" style="width: ${(scores.rhyme_factor || 0) * 100}%"></div></div>
+                </div>
+                <div class="score-card">
+                    <div class="score-label">Flow Consistency</div>
+                    <div class="score-value">${scores.flow_consistency?.toFixed(2) || '--'}</div>
+                    <div class="score-bar"><div class="score-fill" style="width: ${(scores.flow_consistency || 0) * 100}%"></div></div>
+                </div>
+                <div class="score-card">
+                    <div class="score-label">PVS Score</div>
+                    <div class="score-value">${scores.pvs_score?.toFixed(2) || '--'}</div>
+                    <div class="score-bar"><div class="score-fill" style="width: ${(scores.pvs_score || 0) * 100}%"></div></div>
+                </div>
+                <div class="score-card tier">
+                    <div class="score-label">Tier</div>
+                    <div class="score-value tier-${(scores.pvs_tier || 'unknown').toLowerCase()}">${scores.pvs_tier || '--'}</div>
+                </div>
+            `;
+            document.getElementById('scores-display').innerHTML = html;
+        }
+        
+        function updateRecommendations(recs) {
+            const list = document.getElementById('recommendations-list');
+            list.innerHTML = recs.map(r => `<li>${r}</li>`).join('');
+        }
+        
+        function addVersionOption(version) {
+            const select = document.getElementById('version-select');
+            const option = document.createElement('option');
+            option.value = version;
+            option.textContent = `v${version}`;
+            option.selected = true;
+            select.appendChild(option);
+        }
+        
+        async function loadVersion(version) {
+            try {
+                const response = await fetch(`/api/project/${projectId}`);
+                const project = await response.json();
+                
+                const iteration = project.iterations?.find(i => i.version == version);
+                if (iteration) {
+                    document.getElementById('lyrics-editor').value = iteration.lyrics || '';
+                    if (iteration.scores) {
+                        updateScores(iteration.scores);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load version:', e);
+            }
+        }
+        
+        function showPayloadPreview() {
+            previewPayload();
+        }
+    </script>
+</body>
+</html>

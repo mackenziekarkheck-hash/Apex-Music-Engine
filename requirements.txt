@@ -15,3 +15,5 @@ tenacity
 pytest
 pydantic
 fal-client
+flask
+openai
