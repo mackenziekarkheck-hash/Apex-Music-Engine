@@ -5,6 +5,241 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>New Project - APEX Engine</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .seed-composer {
+            max-width: 900px;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .section-header label {
+            margin: 0;
+        }
+        
+        .help-btn {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--accent);
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .help-btn:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+        
+        .char-counter {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: right;
+            margin-top: 4px;
+        }
+        
+        .char-counter.warning {
+            color: var(--accent-yellow);
+        }
+        
+        .char-counter.error {
+            color: var(--accent-red);
+        }
+        
+        .seed-component {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .seed-component textarea {
+            background: var(--bg-secondary);
+            min-height: 80px;
+        }
+        
+        .seed-component.lyrics textarea {
+            min-height: 150px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .component-hint {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        
+        .optimize-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .optimize-bar .btn {
+            flex: 1;
+        }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        
+        .modal-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            max-width: 700px;
+            width: 100%;
+            margin: 40px 0;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+        
+        .modal-body {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        .tag-category {
+            margin-bottom: 20px;
+        }
+        
+        .tag-category h4 {
+            color: var(--accent);
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .tag-chip {
+            background: var(--bg-tertiary);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        
+        .tag-chip:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        
+        .guidance-section {
+            margin-bottom: 20px;
+        }
+        
+        .guidance-section h4 {
+            color: var(--accent-purple);
+            margin-bottom: 8px;
+        }
+        
+        .guidance-section p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        
+        .guidance-section ul {
+            margin-left: 20px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .guidance-section li {
+            margin-bottom: 6px;
+        }
+        
+        .guidance-section code {
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.85rem;
+        }
+        
+        .loading-state {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-secondary);
+        }
+        
+        .loading-state.active {
+            display: flex;
+        }
+        
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -14,7 +249,7 @@
         </header>
         
         <main>
-            <form method="POST" class="project-form">
+            <form method="POST" class="project-form seed-composer" id="projectForm">
                 <div class="form-group">
                     <label for="name">Project Name</label>
                     <input type="text" id="name" name="name" required placeholder="My Trap Banger">
@@ -22,7 +257,10 @@
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="genre">Genre</label>
+                        <div class="section-header">
+                            <label for="genre">Genre</label>
+                            <button type="button" class="help-btn" onclick="openModal('tagsModal')">?</button>
+                        </div>
                         <select id="genre" name="genre">
                             <option value="trap">Trap</option>
                             <option value="drill">Drill</option>
@@ -32,6 +270,8 @@
                             <option value="emo rap">Emo Rap</option>
                             <option value="conscious rap">Conscious Rap</option>
                             <option value="pop rap">Pop Rap</option>
+                            <option value="memphis rap">Memphis Rap</option>
+                            <option value="lo-fi hip hop">Lo-Fi Hip Hop</option>
                         </select>
                     </div>
                     
@@ -51,33 +291,104 @@
                             <option value="hype">Hype</option>
                             <option value="introspective">Introspective</option>
                             <option value="triumphant">Triumphant</option>
+                            <option value="menacing">Menacing</option>
+                            <option value="dreamy">Dreamy</option>
                         </select>
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="tags">Additional Tags (comma-separated)</label>
-                    <input type="text" id="tags" name="tags" placeholder="808, hi-hats, autotune">
+                    <div class="section-header">
+                        <label for="tags">Additional Tags</label>
+                        <button type="button" class="help-btn" onclick="openModal('tagsModal')">?</button>
+                    </div>
+                    <input type="text" id="tags" name="tags" placeholder="808, hi-hats, autotune, layered vocals">
+                    <div class="char-counter">Separate tags with commas. Use tags from the Tag Explorer for best results.</div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="seed_text">Creative Brief / Seed</label>
-                    <textarea id="seed_text" name="seed_text" rows="5" placeholder="Describe the concept, theme, or inspiration for this song. What story do you want to tell? What emotions should it evoke?"></textarea>
+                <h2 style="font-size: 1.1rem; margin: 25px 0 15px; padding-top: 15px; border-top: 1px solid var(--border);">
+                    Seed Composition
+                    <button type="button" class="help-btn" onclick="openModal('seedGuidanceModal')" style="margin-left: 8px;">?</button>
+                </h2>
+                
+                <div class="seed-component">
+                    <div class="section-header">
+                        <label for="prompt_text">Prompt / Description</label>
+                    </div>
+                    <p class="component-hint">Describe the texture, atmosphere, and instrumentation. Use specific musical terminology.</p>
+                    <textarea id="prompt_text" name="prompt_text" rows="3" placeholder="A high-fidelity, studio-quality production with heavy distorted 808s, rapid-fire hi-hat triplets, and dark synth pads. Aggressive vocal delivery with wide stereo imaging."></textarea>
+                    <div class="char-counter" id="promptCounter">0 / 500 characters (recommended)</div>
                 </div>
                 
-                <div class="form-row">
+                <div class="seed-component lyrics">
+                    <div class="section-header">
+                        <label for="lyrics_text">Lyrics</label>
+                    </div>
+                    <p class="component-hint">Use [Verse], [Chorus], [Intro], [Outro] tags. Line breaks indicate pauses. CAPS signal intensity.</p>
+                    <textarea id="lyrics_text" name="lyrics_text" rows="8" placeholder="[Intro]
+(Yeah)
+Check it...
+
+[Verse 1]
+Digital signals running through the wire
+Logic gates open, spitting pure fire
+
+[Chorus]
+This the future sound
+Automated underground"></textarea>
+                    <div class="char-counter" id="lyricsCounter">0 / 1500 characters (for ~90 sec generation)</div>
+                </div>
+                
+                <div class="seed-component">
+                    <div class="section-header">
+                        <label for="neuro_effects">Neuropsychological Effects</label>
+                    </div>
+                    <p class="component-hint">Target emotional responses: frisson triggers, tension/release patterns, emotional arc.</p>
+                    <textarea id="neuro_effects" name="neuro_effects" rows="2" placeholder="Build tension in verse with sparse arrangement, release with full instrumentation on chorus. Target frisson at 1:15 drop with dynamic surge and spectral expansion."></textarea>
+                    <div class="char-counter" id="neuroCounter">0 / 300 characters</div>
+                </div>
+                
+                <div class="seed-component">
+                    <div class="section-header">
+                        <label for="neurochemical_effects">Neurochemical Targets</label>
+                    </div>
+                    <p class="component-hint">Dopaminergic engagement via rhythmic prediction, reward anticipation, groove quality.</p>
+                    <textarea id="neurochemical_effects" name="neurochemical_effects" rows="2" placeholder="Syncopated hi-hats for rhythmic prediction error. Strong downbeat emphasis for dopamine release. Earworm hook with repetition for memory encoding."></textarea>
+                    <div class="char-counter" id="neurochemCounter">0 / 300 characters</div>
+                </div>
+                
+                <div class="seed-component">
+                    <div class="section-header">
+                        <label for="musical_effects">Musical Effects</label>
+                    </div>
+                    <p class="component-hint">Production techniques, mixing notes, reference tracks, structural decisions.</p>
+                    <textarea id="musical_effects" name="musical_effects" rows="2" placeholder="Half-time feel on verse, double-time hi-hats on chorus. Sidechain compression on pads. Reference: Travis Scott production style with spacey reverbs."></textarea>
+                    <div class="char-counter" id="musicalCounter">0 / 300 characters</div>
+                </div>
+                
+                <div class="optimize-bar">
+                    <button type="button" class="btn btn-secondary" id="optimizeBtn" onclick="optimizeSeed()">
+                        Optimize with AI
+                    </button>
+                    <div class="loading-state" id="optimizeLoading">
+                        <div class="loading-spinner"></div>
+                        <span>Optimizing seed composition...</span>
+                    </div>
+                </div>
+                
+                <div class="form-row" style="margin-top: 20px;">
                     <div class="form-group">
                         <label for="prompt_strength">Prompt Strength (CFG Scale)</label>
                         <input type="range" id="prompt_strength" name="prompt_strength" min="1.0" max="4.0" step="0.1" value="2.0">
                         <span class="range-value">2.0</span>
-                        <small>Higher = stricter genre adherence</small>
+                        <small>Higher = stricter genre adherence (1.5-2.0 natural, 2.5-4.0 aggressive)</small>
                     </div>
                     
                     <div class="form-group">
                         <label for="balance_strength">Balance (Vocal/Instrumental)</label>
                         <input type="range" id="balance_strength" name="balance_strength" min="0.3" max="0.9" step="0.05" value="0.7">
                         <span class="range-value">0.7</span>
-                        <small>Higher = more vocal presence</small>
+                        <small>Higher = more vocal presence (0.7-0.8 for rap clarity)</small>
                     </div>
                 </div>
                 
@@ -89,12 +400,416 @@
         </main>
     </div>
     
+    <div class="modal-overlay" id="tagsModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Sonauto Tag Explorer</h3>
+                <button class="modal-close" onclick="closeModal('tagsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Click tags to copy them. <strong>Tag order matters</strong> - anchor genre first, then subgenre, mood, era, production style.
+                </p>
+                
+                <div class="tag-category">
+                    <h4>Core Genres</h4>
+                    <div class="tag-list">
+                        <span class="tag-chip" onclick="copyTag(this)">hip hop</span>
+                        <span class="tag-chip" onclick="copyTag(this)">rap</span>
+                        <span class="tag-chip" onclick="copyTag(this)">trap</span>
+                        <span class="tag-chip" onclick="copyTag(this)">drill</span>
+                        <span class="tag-chip" onclick="copyTag(this)">boom bap</span>
+                        <span class="tag-chip" onclick="copyTag(this)">phonk</span>
+                    </div>
+                </div>
+                
+                <div class="tag-category">
+                    <h4>Subgenres</h4>
+                    <div class="tag-list">
+                        <span class="tag-chip" onclick="copyTag(this)">pop rap</span>
+                        <span class="tag-chip" onclick="copyTag(this)">cloud rap</span>
+                        <span class="tag-chip" onclick="copyTag(this)">emo rap</span>
+                        <span class="tag-chip" onclick="copyTag(this)">conscious rap</span>
+                        <span class="tag-chip" onclick="copyTag(this)">mumble rap</span>
+                        <span class="tag-chip" onclick="copyTag(this)">gangsta rap</span>
+                        <span class="tag-chip" onclick="copyTag(this)">jazz rap</span>
+                        <span class="tag-chip" onclick="copyTag(this)">lo-fi hip hop</span>
+                        <span class="tag-chip" onclick="copyTag(this)">experimental hip hop</span>
+                        <span class="tag-chip" onclick="copyTag(this)">memphis rap</span>
+                        <span class="tag-chip" onclick="copyTag(this)">drift phonk</span>
+                    </div>
+                </div>
+                
+                <div class="tag-category">
+                    <h4>Regional Styles</h4>
+                    <div class="tag-list">
+                        <span class="tag-chip" onclick="copyTag(this)">UK drill</span>
+                        <span class="tag-chip" onclick="copyTag(this)">Chicago drill</span>
+                        <span class="tag-chip" onclick="copyTag(this)">NY drill</span>
+                        <span class="tag-chip" onclick="copyTag(this)">Atlanta trap</span>
+                        <span class="tag-chip" onclick="copyTag(this)">Houston</span>
+                        <span class="tag-chip" onclick="copyTag(this)">West Coast</span>
+                        <span class="tag-chip" onclick="copyTag(this)">East Coast</span>
+                        <span class="tag-chip" onclick="copyTag(this)">Southern</span>
+                        <span class="tag-chip" onclick="copyTag(this)">UK grime</span>
+                    </div>
+                </div>
+                
+                <div class="tag-category">
+                    <h4>Mood / Vibe</h4>
+                    <div class="tag-list">
+                        <span class="tag-chip" onclick="copyTag(this)">aggressive</span>
+                        <span class="tag-chip" onclick="copyTag(this)">chill</span>
+                        <span class="tag-chip" onclick="copyTag(this)">dark</span>
+                        <span class="tag-chip" onclick="copyTag(this)">energetic</span>
+                        <span class="tag-chip" onclick="copyTag(this)">emotional</span>
+                        <span class="tag-chip" onclick="copyTag(this)">melancholic</span>
+                        <span class="tag-chip" onclick="copyTag(this)">introspective</span>
+                        <span class="tag-chip" onclick="copyTag(this)">upbeat</span>
+                        <span class="tag-chip" onclick="copyTag(this)">party</span>
+                        <span class="tag-chip" onclick="copyTag(this)">hype</span>
+                        <span class="tag-chip" onclick="copyTag(this)">menacing</span>
+                        <span class="tag-chip" onclick="copyTag(this)">triumphant</span>
+                        <span class="tag-chip" onclick="copyTag(this)">nostalgic</span>
+                        <span class="tag-chip" onclick="copyTag(this)">dreamy</span>
+                        <span class="tag-chip" onclick="copyTag(this)">ethereal</span>
+                        <span class="tag-chip" onclick="copyTag(this)">atmospheric</span>
+                        <span class="tag-chip" onclick="copyTag(this)">raw</span>
+                        <span class="tag-chip" onclick="copyTag(this)">intense</span>
+                    </div>
+                </div>
+                
+                <div class="tag-category">
+                    <h4>Era / Style</h4>
+                    <div class="tag-list">
+                        <span class="tag-chip" onclick="copyTag(this)">90s</span>
+                        <span class="tag-chip" onclick="copyTag(this)">2000s</span>
+                        <span class="tag-chip" onclick="copyTag(this)">2010s</span>
+                        <span class="tag-chip" onclick="copyTag(this)">2020s</span>
+                        <span class="tag-chip" onclick="copyTag(this)">old school</span>
+                        <span class="tag-chip" onclick="copyTag(this)">modern</span>
+                        <span class="tag-chip" onclick="copyTag(this)">retro</span>
+                        <span class="tag-chip" onclick="copyTag(this)">contemporary</span>
+                    </div>
+                </div>
+                
+                <div class="tag-category">
+                    <h4>Production Quality</h4>
+                    <div class="tag-list">
+                        <span class="tag-chip" onclick="copyTag(this)">high fidelity</span>
+                        <span class="tag-chip" onclick="copyTag(this)">lo-fi</span>
+                        <span class="tag-chip" onclick="copyTag(this)">polished</span>
+                        <span class="tag-chip" onclick="copyTag(this)">gritty</span>
+                        <span class="tag-chip" onclick="copyTag(this)">clean</span>
+                        <span class="tag-chip" onclick="copyTag(this)">distorted</span>
+                        <span class="tag-chip" onclick="copyTag(this)">studio quality</span>
+                    </div>
+                </div>
+                
+                <div class="tag-category">
+                    <h4>Instrumentation</h4>
+                    <div class="tag-list">
+                        <span class="tag-chip" onclick="copyTag(this)">heavy bass</span>
+                        <span class="tag-chip" onclick="copyTag(this)">808</span>
+                        <span class="tag-chip" onclick="copyTag(this)">distorted 808</span>
+                        <span class="tag-chip" onclick="copyTag(this)">piano</span>
+                        <span class="tag-chip" onclick="copyTag(this)">guitar</span>
+                        <span class="tag-chip" onclick="copyTag(this)">synth</span>
+                        <span class="tag-chip" onclick="copyTag(this)">strings</span>
+                        <span class="tag-chip" onclick="copyTag(this)">horns</span>
+                        <span class="tag-chip" onclick="copyTag(this)">sample</span>
+                        <span class="tag-chip" onclick="copyTag(this)">vinyl</span>
+                        <span class="tag-chip" onclick="copyTag(this)">bells</span>
+                        <span class="tag-chip" onclick="copyTag(this)">choir</span>
+                        <span class="tag-chip" onclick="copyTag(this)">orchestral</span>
+                        <span class="tag-chip" onclick="copyTag(this)">ambient</span>
+                        <span class="tag-chip" onclick="copyTag(this)">industrial</span>
+                        <span class="tag-chip" onclick="copyTag(this)">electronic</span>
+                        <span class="tag-chip" onclick="copyTag(this)">acoustic</span>
+                    </div>
+                </div>
+                
+                <div class="tag-category">
+                    <h4>Tempo / Rhythm</h4>
+                    <div class="tag-list">
+                        <span class="tag-chip" onclick="copyTag(this)">fast tempo</span>
+                        <span class="tag-chip" onclick="copyTag(this)">slow tempo</span>
+                        <span class="tag-chip" onclick="copyTag(this)">medium tempo</span>
+                        <span class="tag-chip" onclick="copyTag(this)">half-time</span>
+                        <span class="tag-chip" onclick="copyTag(this)">double-time</span>
+                    </div>
+                </div>
+                
+                <div class="tag-category">
+                    <h4>Vocal Style</h4>
+                    <div class="tag-list">
+                        <span class="tag-chip" onclick="copyTag(this)">layered vocals</span>
+                        <span class="tag-chip" onclick="copyTag(this)">backing vocals</span>
+                        <span class="tag-chip" onclick="copyTag(this)">autotune</span>
+                        <span class="tag-chip" onclick="copyTag(this)">chopped and screwed</span>
+                    </div>
+                </div>
+                
+                <div class="tag-category">
+                    <h4>Mix / Spatial</h4>
+                    <div class="tag-list">
+                        <span class="tag-chip" onclick="copyTag(this)">wide stereo</span>
+                        <span class="tag-chip" onclick="copyTag(this)">mono</span>
+                        <span class="tag-chip" onclick="copyTag(this)">reverb heavy</span>
+                        <span class="tag-chip" onclick="copyTag(this)">dry mix</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="seedGuidanceModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Seed Composition Guide</h3>
+                <button class="modal-close" onclick="closeModal('seedGuidanceModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="guidance-section">
+                    <h4>Understanding Latent Diffusion</h4>
+                    <p>
+                        Sonauto uses a <strong>latent diffusion model</strong>, not a token-based model like Suno. 
+                        This means control is achieved through <strong>semantic embeddings</strong> and <strong>parametric steering</strong> 
+                        rather than bracketed commands.
+                    </p>
+                    <p>
+                        The model "hears" the global context holistically. It interprets your prompt as an aggregate semantic vector 
+                        that guides the denoising process from noise to audio.
+                    </p>
+                </div>
+                
+                <div class="guidance-section">
+                    <h4>Prompt / Description Field</h4>
+                    <p>This is where you define the <strong>texture and attitude</strong> of the track. Focus on:</p>
+                    <ul>
+                        <li><strong>Instrumentation:</strong> "heavy 808 bass", "rolling hi-hats", "sampled jazz piano"</li>
+                        <li><strong>Atmosphere:</strong> "dark", "dystopian", "nocturnal", "triumphant"</li>
+                        <li><strong>Vocal Delivery:</strong> "aggressive flow", "melodic hook", "staccato delivery"</li>
+                        <li><strong>Production Quality:</strong> "high-fidelity", "studio-quality", "wide stereo imaging"</li>
+                    </ul>
+                </div>
+                
+                <div class="guidance-section">
+                    <h4>Lyrics Field</h4>
+                    <p>Structure your lyrics with meta-tags that the model recognizes:</p>
+                    <ul>
+                        <li><code>[Intro]</code> - Usually instrumental or spoken ad-libs</li>
+                        <li><code>[Verse]</code> / <code>[Verse 1]</code> - Main lyrical content</li>
+                        <li><code>[Chorus]</code> - The hook, often more melodic</li>
+                        <li><code>[Bridge]</code> - Transitional section</li>
+                        <li><code>[Outro]</code> - Fading out or final ad-libs</li>
+                    </ul>
+                    <p><strong>Formatting tips:</strong></p>
+                    <ul>
+                        <li>Use line breaks to indicate pauses (since <code>(breath)</code> doesn't work)</li>
+                        <li>Use <strong>CAPS</strong> to signal intensity shifts</li>
+                        <li>Use ellipses <code>...</code> for dramatic pauses</li>
+                        <li>Parenthetical text <code>(yeah!)</code> may be interpreted as ad-libs</li>
+                    </ul>
+                </div>
+                
+                <div class="guidance-section">
+                    <h4>Neuropsychological Effects</h4>
+                    <p>Target specific emotional responses:</p>
+                    <ul>
+                        <li><strong>Frisson (chills):</strong> Triggered by dynamic surges, spectral expansion, expectation violation</li>
+                        <li><strong>Tension/Release:</strong> Build with sparse arrangement, release with full instrumentation</li>
+                        <li><strong>Emotional Arc:</strong> Plan how the track should make listeners feel over time</li>
+                    </ul>
+                </div>
+                
+                <div class="guidance-section">
+                    <h4>Neurochemical Targets</h4>
+                    <p>Engineer dopaminergic engagement through rhythm:</p>
+                    <ul>
+                        <li><strong>Syncopation:</strong> Off-beat emphasis creates prediction error (dopamine release)</li>
+                        <li><strong>Groove Quality:</strong> Micro-timing variations make beats feel "human"</li>
+                        <li><strong>Earworm Potential:</strong> Repetition + novelty for memory encoding</li>
+                    </ul>
+                </div>
+                
+                <div class="guidance-section">
+                    <h4>Musical Effects</h4>
+                    <p>Production techniques and mixing notes:</p>
+                    <ul>
+                        <li><strong>Tempo Feel:</strong> Half-time, double-time, triplet hi-hats</li>
+                        <li><strong>Processing:</strong> Sidechain compression, reverb, delay</li>
+                        <li><strong>References:</strong> Name specific artists or production styles</li>
+                    </ul>
+                </div>
+                
+                <div class="guidance-section">
+                    <h4>CFG Scale (Prompt Strength)</h4>
+                    <p>This controls how strictly the model follows your prompt:</p>
+                    <ul>
+                        <li><strong>1.5-2.0:</strong> Natural genres (pop rap, melodic, acoustic, jazz rap)</li>
+                        <li><strong>2.0-2.5:</strong> Balanced genres (trap, hip hop, boom bap, conscious rap)</li>
+                        <li><strong>2.5-4.0:</strong> Aggressive genres (phonk, drill, industrial) - artifacts become aesthetic</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script>
         document.querySelectorAll('input[type="range"]').forEach(input => {
             const valueSpan = input.nextElementSibling;
             input.addEventListener('input', () => {
                 valueSpan.textContent = input.value;
             });
+        });
+        
+        function setupCounter(inputId, counterId, limit) {
+            const input = document.getElementById(inputId);
+            const counter = document.getElementById(counterId);
+            if (!input || !counter) return;
+            
+            function updateCounter() {
+                const len = input.value.length;
+                const words = input.value.trim() ? input.value.trim().split(/\s+/).length : 0;
+                counter.textContent = `${len} / ${limit} characters | ${words} words`;
+                
+                counter.classList.remove('warning', 'error');
+                if (len > limit * 1.2) {
+                    counter.classList.add('error');
+                } else if (len > limit) {
+                    counter.classList.add('warning');
+                }
+            }
+            
+            input.addEventListener('input', updateCounter);
+            updateCounter();
+        }
+        
+        setupCounter('prompt_text', 'promptCounter', 500);
+        setupCounter('lyrics_text', 'lyricsCounter', 1500);
+        setupCounter('neuro_effects', 'neuroCounter', 300);
+        setupCounter('neurochemical_effects', 'neurochemCounter', 300);
+        setupCounter('musical_effects', 'musicalCounter', 300);
+        
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal(modal.id);
+                }
+            });
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+                    closeModal(modal.id);
+                });
+            }
+        });
+        
+        function copyTag(el) {
+            const tag = el.textContent;
+            const tagsInput = document.getElementById('tags');
+            const current = tagsInput.value.trim();
+            
+            if (current) {
+                const existing = current.split(',').map(t => t.trim().toLowerCase());
+                if (!existing.includes(tag.toLowerCase())) {
+                    tagsInput.value = current + ', ' + tag;
+                }
+            } else {
+                tagsInput.value = tag;
+            }
+            
+            el.style.background = 'var(--accent)';
+            el.style.color = '#fff';
+            setTimeout(() => {
+                el.style.background = '';
+                el.style.color = '';
+            }, 300);
+        }
+        
+        async function optimizeSeed() {
+            const btn = document.getElementById('optimizeBtn');
+            const loading = document.getElementById('optimizeLoading');
+            
+            btn.style.display = 'none';
+            loading.classList.add('active');
+            
+            const seedData = {
+                prompt_text: document.getElementById('prompt_text').value,
+                lyrics_text: document.getElementById('lyrics_text').value,
+                neuro_effects: document.getElementById('neuro_effects').value,
+                neurochemical_effects: document.getElementById('neurochemical_effects').value,
+                musical_effects: document.getElementById('musical_effects').value,
+                genre: document.getElementById('genre').value,
+                mood: document.getElementById('mood').value,
+                bpm: document.getElementById('bpm').value,
+                tags: document.getElementById('tags').value
+            };
+            
+            try {
+                const response = await fetch('/api/optimize-seed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(seedData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.prompt_text) document.getElementById('prompt_text').value = result.prompt_text;
+                    if (result.lyrics_text) document.getElementById('lyrics_text').value = result.lyrics_text;
+                    if (result.neuro_effects) document.getElementById('neuro_effects').value = result.neuro_effects;
+                    if (result.neurochemical_effects) document.getElementById('neurochemical_effects').value = result.neurochemical_effects;
+                    if (result.musical_effects) document.getElementById('musical_effects').value = result.musical_effects;
+                    if (result.tags) document.getElementById('tags').value = result.tags;
+                    
+                    document.querySelectorAll('.seed-component textarea').forEach(ta => {
+                        ta.dispatchEvent(new Event('input'));
+                    });
+                    
+                    alert('Seed optimized successfully!');
+                } else {
+                    alert('Optimization failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Optimization failed: ' + err.message);
+            } finally {
+                btn.style.display = '';
+                loading.classList.remove('active');
+            }
+        }
+        
+        document.getElementById('projectForm').addEventListener('submit', function(e) {
+            const seedText = [
+                document.getElementById('prompt_text').value,
+                document.getElementById('lyrics_text').value,
+                document.getElementById('neuro_effects').value,
+                document.getElementById('neurochemical_effects').value,
+                document.getElementById('musical_effects').value
+            ].filter(Boolean).join('\n\n---\n\n');
+            
+            let hiddenField = document.getElementById('seed_text_combined');
+            if (!hiddenField) {
+                hiddenField = document.createElement('input');
+                hiddenField.type = 'hidden';
+                hiddenField.name = 'seed_text';
+                hiddenField.id = 'seed_text_combined';
+                this.appendChild(hiddenField);
+            }
+            hiddenField.value = seedText;
         });
     </script>
 </body>
