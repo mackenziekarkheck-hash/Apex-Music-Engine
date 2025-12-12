@@ -62,3 +62,38 @@ The system includes a Flask Web UI for project management, featuring a redesigne
 -   **`soundfile`**: Audio file I/O.
 -   **`pydantic`**: API payload validation for Sonauto requests.
 -   **Flask**: Web framework for the UI.
+
+## Local Deployment
+
+For running APEX Engine on your local machine (outside of Replit), see:
+
+-   **[README.md](README.md)**: Quick-start installation guide
+-   **[LOCAL_DEPLOYMENT.md](LOCAL_DEPLOYMENT.md)**: Comprehensive reference documentation including:
+    - System requirements for Windows, macOS, and Linux
+    - Step-by-step installation instructions
+    - API key configuration (OpenAI, Fal.ai)
+    - Troubleshooting common issues
+    - Architecture and development guide
+
+### Quick Start (Local)
+```bash
+# Clone and setup
+git clone <repository-url>
+cd apex-engine
+python -m venv venv
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+pip install -r requirements.txt
+
+# Configure (optional - runs in simulation mode without keys)
+cp .env.example .env
+# Edit .env with your API keys
+
+# Run
+./run.sh          # Linux/macOS
+run.bat           # Windows
+```
+
+### Startup Scripts
+- **run.sh**: Linux/macOS startup with environment checks
+- **run.bat**: Windows startup with environment checks
+- Both support `--cli`, `--demo`, `--help` options
