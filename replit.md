@@ -30,6 +30,13 @@ The system follows a `PLAN → LYRICAL_ARCHITECT → SONAUTO_GENERATE → FLOW_S
 ### UI/UX Decisions
 The system includes a Flask Web UI for project management, featuring a redesigned project creation and workspace with component-based seed input (Prompt, Lyrics, Neuropsychological Effects, Neurochemical Targets, Musical Effects). It includes character/word counters, help modals with Sonauto Tag Explorer taxonomy, and an AI-powered seed optimization endpoint.
 
+**Recent Enhancements (Dec 2025):**
+- **Tools Panel**: On-demand agent invocation with buttons for Rhyme, Flow, Quotability, Trend, and Full Analysis
+- **Pre-Production Console**: Embedded log panel with color-coded output (green=pass, yellow=warning, red=error, blue=info, purple=tips)
+- **Magic Fill**: GPT-4o powered auto-population of all form fields from a concept/theme
+- **Song Health Dashboard**: Visual progress bars, color-coded scores, and tier badges (Gold/Platinum/Diamond/Viral)
+- **Help Icons**: Contextual help buttons (?) on all input fields with tooltips loaded from ui_text_config.py
+
 ### Technical Implementations
 -   **API Client**: Uses the official `fal_client` SDK for Fal.ai integration, supporting both synchronous polling and asynchronous webhook patterns.
 -   **State Management**: `RapGenerationState` (TypedDict) ensures type safety.
