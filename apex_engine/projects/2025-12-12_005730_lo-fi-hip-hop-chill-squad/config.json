@@ -1,0 +1,19 @@
+{
+  "id": "2025-12-12_005730_lo-fi-hip-hop-chill-squad",
+  "name": "Lo-Fi Hip Hop Chill Squad",
+  "created_at": "2025-12-12T00:57:30.171439",
+  "updated_at": "2025-12-12T00:57:30.171446",
+  "genre": "lo-fi hip hop",
+  "bpm": 140,
+  "tags": [
+    "lo-fi hip hop",
+    "hip hop",
+    "rap"
+  ],
+  "mood": "aggressive",
+  "prompt_strength": 2.0,
+  "balance_strength": 0.7,
+  "current_iteration": 0,
+  "status": "draft",
+  "approved_version": null
+}
