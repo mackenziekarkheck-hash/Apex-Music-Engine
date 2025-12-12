@@ -480,43 +480,37 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
                     <div class="char-counter" id="lyricsCounter">0 / 1500 chars</div>
                 </div>
                 
-                <button type="button" class="collapsible-toggle" onclick="toggleAdvanced()">
-                    Show Advanced Fields
-                </button>
+                <div class="seed-component">
+                    <div class="section-header">
+                        <label>Neuropsychological Effects</label>
+                        <button type="button" class="help-btn" onclick="openFieldHelp('neuro_effects')">?</button>
+                        <button type="button" class="optimize-field-btn" onclick="optimizeField('neuro_effects')" title="Optimize with AI">AI</button>
+                    </div>
+                    <p class="component-hint">Frisson triggers, tension/release</p>
+                    <textarea id="neuro-effects" rows="2" placeholder="Build tension in verse, release on chorus...">{{ project.neuro_effects or '' }}</textarea>
+                    <div class="char-counter" id="neuroCounter">0 / 300 chars</div>
+                </div>
                 
-                <div class="collapsible-content" id="advancedFields">
-                    <div class="seed-component">
-                        <div class="section-header">
-                            <label>Neuropsychological Effects</label>
-                            <button type="button" class="help-btn" onclick="openFieldHelp('neuro_effects')">?</button>
-                            <button type="button" class="optimize-field-btn" onclick="optimizeField('neuro_effects')" title="Optimize with AI">AI</button>
-                        </div>
-                        <p class="component-hint">Frisson triggers, tension/release</p>
-                        <textarea id="neuro-effects" rows="2" placeholder="Build tension in verse, release on chorus...">{{ project.neuro_effects or '' }}</textarea>
-                        <div class="char-counter" id="neuroCounter">0 / 300 chars</div>
+                <div class="seed-component">
+                    <div class="section-header">
+                        <label>Neurochemical Targets</label>
+                        <button type="button" class="help-btn" onclick="openFieldHelp('neurochemical_effects')">?</button>
+                        <button type="button" class="optimize-field-btn" onclick="optimizeField('neurochemical_effects')" title="Optimize with AI">AI</button>
                     </div>
-                    
-                    <div class="seed-component">
-                        <div class="section-header">
-                            <label>Neurochemical Targets</label>
-                            <button type="button" class="help-btn" onclick="openFieldHelp('neurochemical_effects')">?</button>
-                            <button type="button" class="optimize-field-btn" onclick="optimizeField('neurochemical_effects')" title="Optimize with AI">AI</button>
-                        </div>
-                        <p class="component-hint">Syncopation, groove, dopamine hooks</p>
-                        <textarea id="neurochemical-effects" rows="2" placeholder="Syncopated hi-hats for prediction error...">{{ project.neurochemical_effects or '' }}</textarea>
-                        <div class="char-counter" id="neurochemCounter">0 / 300 chars</div>
+                    <p class="component-hint">Syncopation, groove, dopamine hooks</p>
+                    <textarea id="neurochemical-effects" rows="2" placeholder="Syncopated hi-hats for prediction error...">{{ project.neurochemical_effects or '' }}</textarea>
+                    <div class="char-counter" id="neurochemCounter">0 / 300 chars</div>
+                </div>
+                
+                <div class="seed-component">
+                    <div class="section-header">
+                        <label>Musical Effects</label>
+                        <button type="button" class="help-btn" onclick="openFieldHelp('musical_effects')">?</button>
+                        <button type="button" class="optimize-field-btn" onclick="optimizeField('musical_effects')" title="Optimize with AI">AI</button>
                     </div>
-                    
-                    <div class="seed-component">
-                        <div class="section-header">
-                            <label>Musical Effects</label>
-                            <button type="button" class="help-btn" onclick="openFieldHelp('musical_effects')">?</button>
-                            <button type="button" class="optimize-field-btn" onclick="optimizeField('musical_effects')" title="Optimize with AI">AI</button>
-                        </div>
-                        <p class="component-hint">Production, mixing, references</p>
-                        <textarea id="musical-effects" rows="2" placeholder="Half-time verse, double-time chorus...">{{ project.musical_effects or '' }}</textarea>
-                        <div class="char-counter" id="musicalCounter">0 / 300 chars</div>
-                    </div>
+                    <p class="component-hint">Production, mixing, references</p>
+                    <textarea id="musical-effects" rows="2" placeholder="Half-time verse, double-time chorus...">{{ project.musical_effects or '' }}</textarea>
+                    <div class="char-counter" id="musicalCounter">0 / 300 chars</div>
                 </div>
                 
                 <div class="optimize-bar">
