@@ -358,6 +358,97 @@ def api_generate_audio(project_id):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/magic-fill', methods=['POST'])
+def api_magic_fill():
+    """API: Magic Fill - Auto-populate all form fields using GPT-4o."""
+    try:
+        data = request.json or {}
+        
+        partial_inputs = {
+            'name': data.get('name', ''),
+            'genre': data.get('genre', ''),
+            'bpm': data.get('bpm'),
+            'mood': data.get('mood', ''),
+            'prompt_text': data.get('prompt_text', ''),
+            'lyrics_text': data.get('lyrics_text', ''),
+            'tags': data.get('tags', ''),
+            'concept': data.get('concept', '')
+        }
+        
+        partial_inputs = {k: v for k, v in partial_inputs.items() if v}
+        
+        context_text = data.get('context', '')
+        
+        result = llm_client.magic_fill(
+            partial_inputs=partial_inputs,
+            context_text=context_text
+        )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Magic fill failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/project/<project_id>/analyze/<analysis_type>', methods=['POST'])
+def api_analyze_lyrics(project_id, analysis_type):
+    """API: On-demand agent invocation for specific analysis types."""
+    valid_types = ['rhyme', 'flow', 'meme', 'trend', 'comprehensive']
+    if analysis_type not in valid_types:
+        return jsonify({'error': f'Invalid analysis type. Valid: {valid_types}'}), 400
+    
+    try:
+        project = project_manager.load_project(project_id)
+        data = request.json or {}
+        
+        lyrics = data.get('lyrics', '')
+        if not lyrics and project.get('iterations'):
+            lyrics = project['iterations'][-1].get('lyrics', '')
+        
+        if not lyrics:
+            return jsonify({'error': 'No lyrics to analyze'}), 400
+        
+        algo_scores = score_lyrics(lyrics, project)
+        
+        gpt_analysis = llm_client.analyze_with_gpt(
+            lyrics=lyrics,
+            analysis_type=analysis_type,
+            scores=algo_scores
+        )
+        
+        console_logs = generate_console_output(analysis_type, algo_scores, gpt_analysis)
+        
+        return jsonify({
+            'success': True,
+            'analysis_type': analysis_type,
+            'algorithmic_scores': algo_scores,
+            'gpt_analysis': gpt_analysis,
+            'console_logs': console_logs
+        })
+        
+    except Exception as e:
+        logger.error(f"Analysis failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/field-help/<field_name>', methods=['GET'])
+def api_field_help(field_name):
+    """API: Get help text for a specific field."""
+    try:
+        from apex_engine.config.ui_text_config import FIELD_HELP, AGENT_DESCRIPTIONS
+        
+        if field_name in FIELD_HELP:
+            return jsonify({'success': True, 'help': FIELD_HELP[field_name]})
+        elif field_name in AGENT_DESCRIPTIONS:
+            return jsonify({'success': True, 'help': AGENT_DESCRIPTIONS[field_name]})
+        else:
+            return jsonify({'success': False, 'error': 'Field not found'}), 404
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 def score_lyrics(lyrics: str, project: dict) -> dict:
     """Score lyrics using analysis agents."""
     state = {
@@ -433,6 +524,49 @@ def generate_recommendations(scores: dict) -> list:
         recommendations.append("Lyrics are scoring well! Consider minor polish or approve for generation.")
     
     return recommendations
+
+
+def generate_console_output(analysis_type: str, algo_scores: dict, gpt_analysis: dict) -> list:
+    """Generate color-coded console output for the pre-production console."""
+    logs = []
+    
+    logs.append({
+        'type': 'info',
+        'message': f"Starting {analysis_type} analysis..."
+    })
+    
+    rhyme = algo_scores.get('rhyme_factor', 0)
+    if rhyme >= 0.6:
+        logs.append({'type': 'success', 'message': f"PASS: Rhyme Factor = {rhyme:.2f} (threshold: 0.6)"})
+    elif rhyme >= 0.3:
+        logs.append({'type': 'warning', 'message': f"WARN: Rhyme Factor = {rhyme:.2f} (below recommended: 0.6)"})
+    else:
+        logs.append({'type': 'error', 'message': f"FAIL: Rhyme Factor = {rhyme:.2f} (minimum: 0.3)"})
+    
+    flow = algo_scores.get('flow_consistency', 0)
+    if flow >= 0.7:
+        logs.append({'type': 'success', 'message': f"PASS: Flow Consistency = {flow:.2f}"})
+    elif flow >= 0.5:
+        logs.append({'type': 'warning', 'message': f"WARN: Flow Consistency = {flow:.2f} (consider normalizing)"})
+    else:
+        logs.append({'type': 'error', 'message': f"FAIL: Flow Consistency = {flow:.2f} (too inconsistent)"})
+    
+    pvs = algo_scores.get('pvs_score', 0)
+    tier = algo_scores.get('pvs_tier', 'UNKNOWN')
+    logs.append({'type': 'info', 'message': f"PVS Score: {pvs:.2f} (Tier: {tier})"})
+    
+    if gpt_analysis.get('success'):
+        gpt_score = gpt_analysis.get('score', 'N/A')
+        logs.append({'type': 'info', 'message': f"GPT-4o Analysis Score: {gpt_score}/10"})
+        
+        for rec in gpt_analysis.get('recommendations', [])[:3]:
+            logs.append({'type': 'tip', 'message': f"TIP: {rec}"})
+    else:
+        logs.append({'type': 'warning', 'message': "GPT-4o analysis unavailable"})
+    
+    logs.append({'type': 'info', 'message': f"{analysis_type.title()} analysis complete"})
+    
+    return logs
 
 
 def build_api_payload(project: dict, lyrics: str) -> dict:

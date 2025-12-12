@@ -1,0 +1,60 @@
+The Prompt for Replit
+Role: Senior Full-Stack Developer & AI Systems Architect Objective: Refactor and enhance the existing Python-based AI Music Generation UI to include advanced introspection, contextual help, and agent-driven automation.
+
+Context: We are upgrading an existing application where users input parameters to generate music. We need to bridge the gap between simple inputs and complex backend AI agents.
+
+Core Requirements & Feature Specifications:
+
+1. Contextual Help System (UI/UX)
+
+Requirement: Every input field (text inputs, sliders, dropdowns) must have an associated "Help" or "Info" icon.
+
+Behavior: Hovering or clicking this icon should reveal a tooltip or modal explaining specifically what that parameter does to the audio generation.
+
+Implementation: Store help strings in a separate JSON/Dictionary configuration file (ui_text_config.py) to keep the frontend code clean.
+
+2. On-Demand Agent Invocation (Backend Integration)
+
+Requirement: Add a "Tools" control group containing specific trigger buttons (e.g., "Analyze Lyrics," "Check Syllable Count," "Evaluate Rhyme Density").
+
+Behavior: Clicking these buttons must trigger specific backend Python functions (our AI Agents) asynchronously without refreshing the page.
+
+Data Flow: The UI sends the current text of the lyrics -> The Backend Agent processes it -> Returns a JSON score/metric -> UI updates to display this score next to the lyrics.
+
+3. Integrated "Pre-Production" Analysis Console
+
+Requirement: Create a distinct "Log/Console" panel embedded in the UI (separate from the standard system terminal).
+
+Content: This panel must display:
+
+Structured outputs from the algorithms (e.g., "Rhythm Consistency: 85%").
+
+Text-based recommendations from the AI (e.g., "Line 4 is too long, consider removing 'and'.").
+
+Formatting: Use color-coding (Green for pass, Red for issues, Yellow for warnings) to make the data scannable.
+
+4. Context-Aware Auto-Population (Generative Logic)
+
+Requirement: A "Magic Fill" or "Generate Ideas" button.
+
+Input: The system must read "Attached Assets" (text files/context in the directory) and the current partial inputs.
+
+Process: Send this context to an LLM (via API) to generate a complete JSON configuration for the song.
+
+Output: Automatically map the returned values to the frontend fields (Genre, BPM, Lyrics, Instruments).
+
+5. Pre-Production Telemetry Dashboard
+
+Requirement: Visual indicators that update based on the "Agent Invocation" described in Step 2.
+
+Display: Add a dashboard section (e.g., "Song Health") that visualizes the scores (Lyrics, Structure, Flow) before the user commits to generating the audio file.
+
+Strict Development Guidelines:
+
+Iterative Preservation: Do not delete existing logic. If refactoring, comment out old code first or create a parallel file version.
+
+File Structure: Ensure the new UI components and Backend Agent logic are separated into modular files (e.g., analysis_agents.py, ui_components.py) to prevent a monolithic script.
+
+Error Handling: Ensure that if an AI agent fails to return a score, the UI degrades gracefully (shows a "check failed" error) rather than crashing.
+
+Deliverable: Please analyze the current codebase and generate a Step-by-Step Implementation Plan to build these 5 features. Start with the file structure changes, then the backend agent logic, and finally the UI integration.

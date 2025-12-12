@@ -464,3 +464,205 @@ Only include keys that had meaningful input content."""
                 "success": False,
                 "error": str(e)
             }
+    
+    def magic_fill(
+        self,
+        partial_inputs: Dict[str, Any],
+        context_text: str = "",
+        model: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Magic Fill - Auto-populate all form fields using GPT-4o.
+        
+        Reads partial inputs and optional context (from attached assets)
+        to generate a complete song configuration.
+        
+        Args:
+            partial_inputs: Any fields the user has already filled
+            context_text: Additional context from attached files
+            model: Override default model
+        
+        Returns:
+            Dict with all form fields populated
+        """
+        if not self.is_available:
+            return {
+                "success": False,
+                "error": "GPT-4o not available. Please set OPENAI_API_KEY.",
+                "simulated": True
+            }
+        
+        system_prompt = """You are an expert music producer and AI prompt engineer specializing in rap/hip-hop production.
+
+Given the user's partial inputs and any context, generate a complete song configuration.
+
+Your output must be valid JSON with these fields:
+- name: Project name (string)
+- genre: One of [trap, boom_bap, phonk, drill, melodic, conscious]
+- bpm: Integer between 60-180
+- mood: One of [aggressive, melancholic, hype, dark, confident, introspective]
+- prompt_text: Textural description of the sound (max 500 chars)
+- lyrics_text: Full lyrics with [Verse 1], [Chorus], [Verse 2] tags (max 1500 chars)
+- tags: Comma-separated style tags ordered by priority
+- neuro_effects: Neuropsychological targets for emotional impact (max 300 chars)
+- neurochemical_effects: Dopamine/groove engineering targets (max 300 chars)
+- musical_effects: Production techniques and mixing notes (max 300 chars)
+- prompt_strength: Float 1.5-4.0 (CFG scale, match to genre intensity)
+- balance_strength: Float 0.5-0.9 (vocal/instrumental balance)
+
+Best practices:
+1. Tags order: anchor genre > subgenre > mood > era > production
+2. Prompt describes texture/atmosphere, not commands
+3. Lyrics use proper structural tags with natural line breaks
+4. BPM matches genre conventions (trap: 140-150, boom bap: 85-95, drill: 140-145)
+5. CFG scale matches intensity (melodic: 1.5-2.0, aggressive: 2.5-4.0)"""
+
+        existing = partial_inputs or {}
+        user_prompt = f"""Generate a complete song configuration based on these inputs:
+
+**Existing Inputs**:
+{json.dumps(existing, indent=2) if existing else "(No existing inputs)"}
+
+**Additional Context**:
+{context_text or "(No additional context)"}
+
+Fill in ALL missing fields. If the user provided a theme or concept, build the entire song around it.
+Make the lyrics authentic, with proper rhyme schemes and flow. Include at least 2 verses and a chorus.
+
+Return complete JSON configuration."""
+
+        try:
+            response = self.client.chat.completions.create(
+                model=model or self.DEFAULT_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.8,
+                max_tokens=4000,
+                response_format={"type": "json_object"}
+            )
+            
+            content = response.choices[0].message.content.strip()
+            result = json.loads(content)
+            result["success"] = True
+            result["model"] = response.model
+            result["tokens_used"] = response.usage.total_tokens if response.usage else 0
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Magic fill failed: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def analyze_with_gpt(
+        self,
+        lyrics: str,
+        analysis_type: str = "comprehensive",
+        scores: Optional[Dict[str, Any]] = None,
+        model: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Use GPT-4o to provide intelligent analysis and recommendations.
+        
+        This supplements algorithmic analysis with LLM-powered insights.
+        
+        Args:
+            lyrics: The lyrics to analyze
+            analysis_type: Type of analysis (rhyme, flow, meme, trend, comprehensive)
+            scores: Existing algorithmic scores to contextualize
+            model: Override default model
+        
+        Returns:
+            Dict with analysis results and recommendations
+        """
+        if not self.is_available:
+            return {
+                "success": False,
+                "error": "GPT-4o not available",
+                "recommendations": ["Enable GPT-4o for AI-powered analysis"]
+            }
+        
+        analysis_prompts = {
+            "rhyme": """Analyze these rap lyrics for rhyme quality:
+- Identify rhyme schemes (AABB, ABAB, internal rhymes)
+- Find multisyllabic rhymes and slant rhymes
+- Rate overall rhyme density (1-10)
+- Suggest 3 specific improvements""",
+            
+            "flow": """Analyze these rap lyrics for flow and rhythm:
+- Check syllable consistency across bars
+- Identify natural breath points
+- Rate flow smoothness (1-10)
+- Suggest 3 specific improvements for better delivery""",
+            
+            "meme": """Analyze these rap lyrics for quotability and meme potential:
+- Identify the top 3 most quotable lines
+- Find punchlines with surprise/wordplay
+- Rate overall meme potential (1-10)
+- Suggest how to make lines more shareable""",
+            
+            "trend": """Analyze these rap lyrics for current trend alignment:
+- Identify which subgenre they fit best
+- Rate trend alignment (1-10) - are these lyrics current?
+- Note any dated references or styles
+- Suggest updates for 2024/2025 relevance""",
+            
+            "comprehensive": """Provide a comprehensive analysis of these rap lyrics:
+1. Rhyme Quality: Schemes, density, multisyllabic usage
+2. Flow: Syllable consistency, breath points, delivery notes
+3. Content: Theme clarity, storytelling, authenticity
+4. Commercial Appeal: Hook strength, quotability, trend fit
+5. Technical Score (1-10) and Commercial Score (1-10)
+6. Top 3 strengths and Top 3 areas for improvement"""
+        }
+        
+        prompt_intro = analysis_prompts.get(analysis_type, analysis_prompts["comprehensive"])
+        
+        scores_context = ""
+        if scores:
+            scores_context = f"""
+
+**Algorithmic Scores** (for context):
+- Rhyme Factor: {scores.get('rhyme_factor', 'N/A')}
+- Flow Consistency: {scores.get('flow_consistency', 'N/A')}
+- PVS Score: {scores.get('pvs_score', 'N/A')}"""
+        
+        user_prompt = f"""{prompt_intro}
+{scores_context}
+
+**Lyrics**:
+{lyrics}
+
+Provide analysis as JSON with keys: score (1-10), analysis (string), strengths (list), improvements (list), recommendations (list)"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model=model or self.DEFAULT_MODEL,
+                messages=[
+                    {"role": "system", "content": "You are an expert rap music analyst and producer. Provide actionable, specific feedback."},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.6,
+                max_tokens=1500,
+                response_format={"type": "json_object"}
+            )
+            
+            content = response.choices[0].message.content.strip()
+            result = json.loads(content)
+            result["success"] = True
+            result["analysis_type"] = analysis_type
+            result["model"] = response.model
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"GPT analysis failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "recommendations": ["Analysis failed - check API key and try again"]
+            }
