@@ -82,30 +82,82 @@ Rules:
 Output ONLY the revised lyrics. No explanations."""
 
 
+FIELD_AGENT_MAPPING = {
+    'prompt_text': {
+        'description': 'Production texture, atmosphere, instrumentation',
+        'agents': ['spectral', 'timbre'],
+        'metrics': ['spectral_brightness', 'timbral_clarity', 'production_quality'],
+        'optimization_focus': 'Enhance textural descriptors for latent diffusion model control'
+    },
+    'lyrics_text': {
+        'description': 'Rhyme density, flow, structure',
+        'agents': ['bars', 'flow', 'vowel', 'meme'],
+        'metrics': ['rhyme_factor', 'multisyllabic_rhymes', 'assonance_chains', 'syllable_velocity', 
+                   'plosive_density_index', 'flow_consistency', 'earworm_score', 'quotable_lines'],
+        'optimization_focus': 'Maximize rhyme density, flow consistency, and quotability'
+    },
+    'neuro_effects': {
+        'description': 'Frisson triggers, tension/release dynamics',
+        'agents': ['frisson'],
+        'metrics': ['dynamic_surge', 'spectral_expansion', 'expectation_violation'],
+        'optimization_focus': 'Engineer psychoacoustic moments that trigger chills and emotional peaks'
+    },
+    'neurochemical_effects': {
+        'description': 'Syncopation, groove, dopamine optimization',
+        'agents': ['groove'],
+        'metrics': ['syncopation_index', 'pocket_alignment', 'groove_quality'],
+        'optimization_focus': 'Optimize rhythmic prediction error for dopaminergic engagement'
+    },
+    'musical_effects': {
+        'description': 'Production techniques, mixing, arrangement',
+        'agents': ['flow', 'mix'],
+        'metrics': ['pdi_rating', 'breath_points', 'balance_strength'],
+        'optimization_focus': 'Specify production techniques and mixing notes for Sonauto'
+    }
+}
+
+
 class LLMClient:
-    """GPT-4o client for lyric generation and iteration."""
+    """GPT-4o client for lyric generation and iteration.
     
-    DEFAULT_MODEL = "gpt-4o"
-    FALLBACK_MODEL = "gpt-4o-mini"
+    Uses Replit AI Integrations for OpenAI-compatible API access.
+    This does not require your own API key - charges are billed to Replit credits.
+    """
+    
+    # the newest OpenAI model is "gpt-5" which was released August 7, 2025.
+    # do not change this unless explicitly requested by the user
+    DEFAULT_MODEL = "gpt-5"
+    FALLBACK_MODEL = "gpt-4o"
     
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
+        self.api_key = api_key or os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
+        self.base_url = os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL")
         self._client = None
         
-        if not self.api_key:
-            logger.warning("OPENAI_API_KEY not set. LLM features disabled.")
+        if self.base_url:
+            logger.info("Using Replit AI Integrations for OpenAI access")
+        elif not self.api_key:
+            logger.warning("No OpenAI API key configured. LLM features disabled.")
     
     @property
     def client(self):
-        """Lazy initialization of OpenAI client."""
-        if self._client is None and self.api_key and OPENAI_AVAILABLE:
-            self._client = OpenAI(api_key=self.api_key)
+        """Lazy initialization of OpenAI client with Replit AI Integrations support."""
+        if self._client is None and OPENAI_AVAILABLE:
+            if self.base_url and self.api_key:
+                self._client = OpenAI(
+                    api_key=self.api_key,
+                    base_url=self.base_url
+                )
+            elif self.api_key:
+                self._client = OpenAI(api_key=self.api_key)
         return self._client
     
     @property
     def is_available(self) -> bool:
         """Check if LLM is available."""
-        return bool(self.api_key and OPENAI_AVAILABLE)
+        has_replit_integration = bool(self.base_url and self.api_key)
+        has_direct_key = bool(self.api_key and not self.base_url)
+        return OPENAI_AVAILABLE and (has_replit_integration or has_direct_key)
     
     def generate_lyrics(
         self,
@@ -665,4 +717,123 @@ Provide analysis as JSON with keys: score (1-10), analysis (string), strengths (
                 "success": False,
                 "error": str(e),
                 "recommendations": ["Analysis failed - check API key and try again"]
+            }
+    
+    def optimize_field(
+        self,
+        field_name: str,
+        current_value: str,
+        analysis_context: Dict[str, Any],
+        project_context: Dict[str, Any],
+        model: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Optimize a specific form field using GPT with agent analysis context.
+        
+        This method takes the accumulated console logs from algorithmic analysis
+        and uses them to provide targeted, incremental improvements to a single field.
+        
+        Args:
+            field_name: Name of the field to optimize (e.g., 'lyrics_text', 'prompt_text')
+            current_value: Current content of the field
+            analysis_context: Dict with console_logs and agent metrics
+            project_context: Dict with genre, bpm, mood, etc.
+            model: Override default model
+        
+        Returns:
+            Dict with optimized_value, changes_made, and reasoning
+        """
+        if not self.is_available:
+            return {
+                "success": False,
+                "error": "AI not available",
+                "optimized_value": current_value
+            }
+        
+        field_config = FIELD_AGENT_MAPPING.get(field_name, {})
+        optimization_focus = field_config.get('optimization_focus', 'General improvement')
+        relevant_metrics = field_config.get('metrics', [])
+        
+        metrics_text = ""
+        if analysis_context.get('metrics'):
+            metrics_text = "\n".join([
+                f"- {k}: {v}" for k, v in analysis_context['metrics'].items()
+                if k in relevant_metrics or not relevant_metrics
+            ])
+        
+        console_logs_text = ""
+        if analysis_context.get('console_logs'):
+            console_logs_text = "\n".join([
+                f"[{log.get('type', 'info').upper()}] {log.get('message', '')}"
+                for log in analysis_context['console_logs'][-20:]
+            ])
+        
+        system_prompt = f"""You are an expert music producer optimizing rap lyrics and production settings.
+
+Your task: Optimize the "{field_name}" field based on the analysis context.
+
+**Optimization Focus**: {optimization_focus}
+
+**Relevant Metrics to Improve**:
+{', '.join(relevant_metrics) if relevant_metrics else 'General quality metrics'}
+
+Rules:
+1. Make targeted, incremental improvements - don't rewrite everything
+2. Reference specific metric deficiencies when making changes
+3. Preserve the artist's voice and intent
+4. For lyrics: maximize rhyme density, add multisyllabic rhymes, improve flow
+5. For prompt_text: use specific textural descriptors for latent diffusion
+6. For neuro_effects: target frisson triggers (dynamic surges, spectral expansion)
+7. For neurochemical_effects: optimize syncopation and groove parameters
+8. For musical_effects: specify production techniques precisely
+
+Return JSON with:
+- optimized_value: The improved content
+- changes_made: List of specific changes
+- reasoning: Why each change improves the target metrics"""
+
+        user_prompt = f"""**Field**: {field_name}
+
+**Current Value**:
+{current_value or "(empty)"}
+
+**Project Context**:
+- Genre: {project_context.get('genre', 'trap')}
+- BPM: {project_context.get('bpm', 140)}
+- Mood: {project_context.get('mood', 'aggressive')}
+
+**Current Metrics**:
+{metrics_text or "(No metrics yet)"}
+
+**Analysis Console Logs**:
+{console_logs_text or "(No analysis run yet)"}
+
+Optimize this field to improve the relevant metrics. Make targeted improvements that directly address any issues shown in the console logs."""
+
+        try:
+            response = self.client.chat.completions.create(
+                model=model or self.DEFAULT_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.7,
+                max_completion_tokens=2000,
+                response_format={"type": "json_object"}
+            )
+            
+            content = response.choices[0].message.content.strip()
+            result = json.loads(content)
+            result["success"] = True
+            result["field_name"] = field_name
+            result["model"] = response.model
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Field optimization failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "optimized_value": current_value
             }

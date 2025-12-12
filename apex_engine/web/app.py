@@ -23,8 +23,12 @@ sys.path.insert(0, apex_engine_path)
 sys.path.insert(0, os.path.dirname(apex_engine_path))
 
 from apex_engine.src.core.project_manager import ProjectManager
-from apex_engine.src.core.llm_client import LLMClient
+from apex_engine.src.core.llm_client import LLMClient, FIELD_AGENT_MAPPING
 from apex_engine.src.agents.lyrical.lyrical_architect import LyricalArchitectAgent
+from apex_engine.src.agents.lyrical.agent_bars import BarsAnalyzer
+from apex_engine.src.agents.lyrical.agent_flow import FlowAnalyzer
+from apex_engine.src.agents.lyrical.agent_vowel import VowelAnalyzer
+from apex_engine.src.agents.cultural.agent_meme import MemeAnalyzer
 from apex_engine.src.core.predictor import ViralityPredictor
 
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +42,10 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'apex-dev-key-change-in-
 project_manager = ProjectManager()
 llm_client = LLMClient()
 lyrical_architect = LyricalArchitectAgent()
+bars_analyzer = BarsAnalyzer()
+flow_analyzer = FlowAnalyzer()
+vowel_analyzer = VowelAnalyzer()
+meme_analyzer = MemeAnalyzer()
 virality_predictor = ViralityPredictor()
 
 
