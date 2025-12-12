@@ -36,6 +36,10 @@ The system includes a Flask Web UI for project management, featuring a redesigne
 - **Magic Fill**: GPT-4o powered auto-population of all form fields from a concept/theme
 - **Song Health Dashboard**: Visual progress bars, color-coded scores, and tier badges (Gold/Platinum/Diamond/Viral)
 - **Help Icons**: Contextual help buttons (?) on all input fields with tooltips loaded from ui_text_config.py
+- **Per-Field AI Optimization**: Individual "AI" buttons on each form field (Prompt, Lyrics, Neuro Effects, Neurochemical Effects, Musical Effects) for targeted improvements based on agent analysis context
+- **Comprehensive Agent Logging**: Detailed console output showing all metrics from BarsAnalyzer (RF, multis, assonance), FlowAnalyzer (PDI, velocity, consistency), VowelAnalyzer (entropy, earworm, euphony), MemeAnalyzer (quotables, punchlines)
+- **Agent-to-Field Mapping**: `FIELD_AGENT_MAPPING` config links each form field to relevant analysis agents for context-aware optimization
+- **Replit AI Integrations**: LLMClient now uses `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY` environment variables for OpenAI access without user API key (billed to Replit credits)
 
 ### Technical Implementations
 -   **API Client**: Uses the official `fal_client` SDK for Fal.ai integration, supporting both synchronous polling and asynchronous webhook patterns.
