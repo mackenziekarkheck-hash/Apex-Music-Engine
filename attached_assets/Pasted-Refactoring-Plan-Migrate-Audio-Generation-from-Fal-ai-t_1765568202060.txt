@@ -1,0 +1,58 @@
+Refactoring Plan: Migrate Audio Generation from Fal.ai to Sonauto
+Objective: Completely remove the Fal.ai integration and replace it with direct Sonauto API calls for audio generation.
+
+1. Environment Configuration Updates
+
+Target File: .env (and .env.example if present)
+
+Action:
+
+Delete the line: FAL_KEY=...
+
+Add the new required key: SONAUTO_API_KEY=...
+
+Update comments to reflect the new source:
+
+Code snippet
+
+# -----------------------------------------------------------------------------
+# REQUIRED FOR AUDIO GENERATION
+# -----------------------------------------------------------------------------
+# Sonauto API Key
+# Get yours at: https://sonauto.ai/
+SONAUTO_API_KEY=your_sonauto_api_key_here
+2. Dependency Management
+
+Target File: pyproject.toml or requirements.txt
+
+Action:
+
+Scan for fal-client or similar Fal.ai libraries and remove them.
+
+Ensure the requests library is present (Sonauto typically uses standard REST calls, though check if a specific sonauto SDK wrapper is required/preferred for this project).
+
+3. Codebase Search & Replace
+
+Search Term: fal_client, fal.ai, FAL_KEY
+
+Action: Analyze every occurrence found.
+
+Import Statements: Remove imports like import fal_client.
+
+Client Initialization: Replace Fal client setup with Sonauto headers construction (referencing os.environ.get("SONAUTO_API_KEY")).
+
+Generation Logic:
+
+Locate the specific function handling music generation (e.g., generate_music()).
+
+Replace the fal_client.subscribe or fal_client.submit call structure.
+
+Implement the Sonauto POST request structure:
+
+Endpoint: https://api.sonauto.ai/v1/songs (Verify specific endpoint in documentation).
+
+Payload: Map the previous prompt/lyrics fields to Sonauto's expected JSON body (usually requires prompt, lyrics, instrumental, etc.).
+
+4. Verification Steps
+
+Review the error handling blocks. Fal.ai errors will likely be specific (e.g., queue timeouts). Replace these with standard HTTP error handling for the Sonauto response (e.g., checking for response.status_code != 200).
