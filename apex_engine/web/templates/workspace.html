@@ -1098,7 +1098,7 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
         }
         
         async function runAnalysis(analysisType) {
-            const lyrics = document.getElementById('lyrics-editor').value;
+            const lyrics = document.getElementById('lyrics-editor').value || document.getElementById('lyrics-text').value;
             if (!lyrics.trim()) {
                 addConsoleLine('error', 'No lyrics to analyze. Generate or enter lyrics first.');
                 return;
@@ -1110,28 +1110,66 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
             addConsoleLine('info', `Starting ${analysisType} analysis...`);
             
             try {
-                const response = await fetch(`/api/project/${projectId}/analyze/${analysisType}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({lyrics: lyrics})
-                });
+                let response;
+                let data;
                 
-                const data = await response.json();
-                
-                if (data.success) {
-                    data.console_logs.forEach(log => {
-                        addConsoleLine(log.type, log.message);
+                if (analysisType === 'comprehensive') {
+                    response = await fetch('/api/run-full-analysis', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            project_id: projectId,
+                            lyrics: lyrics
+                        })
                     });
                     
-                    if (data.algorithmic_scores) {
-                        updateScores(data.algorithmic_scores);
-                    }
+                    data = await response.json();
                     
-                    if (data.gpt_analysis && data.gpt_analysis.recommendations) {
-                        updateRecommendations(data.gpt_analysis.recommendations);
+                    if (data.success) {
+                        analysisContext.console_logs = data.console_logs;
+                        analysisContext.metrics = data.metrics;
+                        
+                        data.console_logs.forEach(log => {
+                            addConsoleLine(log.type, log.message);
+                        });
+                        
+                        if (data.metrics) {
+                            updateScores({
+                                rhyme_factor: data.metrics.rhyme_factor,
+                                flow_consistency: data.metrics.flow_consistency,
+                                pvs_score: data.metrics.meme_score,
+                                pvs_tier: data.metrics.rhyme_factor >= 0.8 ? 'DIAMOND' : 
+                                          data.metrics.rhyme_factor >= 0.6 ? 'PLATINUM' : 
+                                          data.metrics.rhyme_factor >= 0.4 ? 'GOLD' : 'UNKNOWN'
+                            });
+                        }
+                    } else {
+                        addConsoleLine('error', 'Analysis failed: ' + (data.error || 'Unknown error'));
                     }
                 } else {
-                    addConsoleLine('error', 'Analysis failed: ' + (data.error || 'Unknown error'));
+                    response = await fetch(`/api/project/${projectId}/analyze/${analysisType}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({lyrics: lyrics})
+                    });
+                    
+                    data = await response.json();
+                    
+                    if (data.success) {
+                        data.console_logs.forEach(log => {
+                            addConsoleLine(log.type, log.message);
+                        });
+                        
+                        if (data.algorithmic_scores) {
+                            updateScores(data.algorithmic_scores);
+                        }
+                        
+                        if (data.gpt_analysis && data.gpt_analysis.recommendations) {
+                            updateRecommendations(data.gpt_analysis.recommendations);
+                        }
+                    } else {
+                        addConsoleLine('error', 'Analysis failed: ' + (data.error || 'Unknown error'));
+                    }
                 }
             } catch (e) {
                 addConsoleLine('error', 'Request failed: ' + e.message);
