@@ -457,6 +457,84 @@ def api_field_help(field_name):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/optimize-field', methods=['POST'])
+def api_optimize_field():
+    """API: Optimize a specific form field using GPT with agent analysis context."""
+    try:
+        data = request.json
+        project_id = data.get('project_id')
+        field_name = data.get('field_name')
+        current_value = data.get('current_value', '')
+        console_logs = data.get('console_logs', [])
+        metrics = data.get('metrics', {})
+        
+        if not project_id or not field_name:
+            return jsonify({'error': 'project_id and field_name are required'}), 400
+        
+        project = project_manager.load_project(project_id)
+        
+        if field_name not in FIELD_AGENT_MAPPING:
+            return jsonify({'error': f'Unknown field: {field_name}'}), 400
+        
+        analysis_context = {
+            'console_logs': console_logs,
+            'metrics': metrics
+        }
+        
+        project_context = {
+            'genre': project.get('genre', 'trap'),
+            'bpm': project.get('bpm', 140),
+            'mood': project.get('mood', 'aggressive')
+        }
+        
+        result = llm_client.optimize_field(
+            field_name=field_name,
+            current_value=current_value,
+            analysis_context=analysis_context,
+            project_context=project_context
+        )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Field optimization failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/run-full-analysis', methods=['POST'])
+def api_run_full_analysis():
+    """API: Run comprehensive analysis on lyrics and return detailed console output."""
+    try:
+        data = request.json
+        project_id = data.get('project_id')
+        lyrics = data.get('lyrics')
+        
+        if not project_id:
+            return jsonify({'error': 'project_id is required'}), 400
+        
+        project = project_manager.load_project(project_id)
+        
+        if not lyrics:
+            lyrics = project.get('lyrics_text', '')
+            if project.get('iterations'):
+                lyrics = project['iterations'][-1].get('lyrics', '') or lyrics
+        
+        if not lyrics:
+            return jsonify({'error': 'No lyrics to analyze'}), 400
+        
+        result = generate_detailed_console_output(lyrics, project)
+        
+        return jsonify({
+            'success': True,
+            'console_logs': result['console_logs'],
+            'metrics': result['metrics']
+        })
+        
+    except Exception as e:
+        logger.error(f"Full analysis failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 def score_lyrics(lyrics: str, project: dict) -> dict:
     """Score lyrics using analysis agents."""
     state = {
@@ -575,6 +653,168 @@ def generate_console_output(analysis_type: str, algo_scores: dict, gpt_analysis:
     logs.append({'type': 'info', 'message': f"{analysis_type.title()} analysis complete"})
     
     return logs
+
+
+def generate_detailed_console_output(lyrics: str, project: dict) -> dict:
+    """
+    Run all lyrical agents and generate comprehensive console output with every metric.
+    
+    Returns dict with:
+    - console_logs: List of color-coded log entries
+    - metrics: Flat dict of all extracted metrics for AI context
+    """
+    logs = []
+    metrics = {}
+    
+    logs.append({'type': 'info', 'message': '═══ APEX COMPREHENSIVE ANALYSIS ═══'})
+    logs.append({'type': 'info', 'message': f'Genre: {project.get("genre", "trap")} | BPM: {project.get("bpm", 140)} | Mood: {project.get("mood", "aggressive")}'})
+    
+    logs.append({'type': 'info', 'message': '─── BarsAnalyzer (Phonetic Rhyme Density) ───'})
+    try:
+        bars_result = bars_analyzer.analyze(lyrics)
+        
+        rf = bars_result.get('rhyme_factor', 0)
+        metrics['rhyme_factor'] = rf
+        if rf >= 0.8:
+            logs.append({'type': 'success', 'message': f'Rhyme Factor: {rf:.3f} (EXCELLENT - elite lyricism)'})
+        elif rf >= 0.6:
+            logs.append({'type': 'success', 'message': f'Rhyme Factor: {rf:.3f} (GOOD - above threshold)'})
+        elif rf >= 0.4:
+            logs.append({'type': 'warning', 'message': f'Rhyme Factor: {rf:.3f} (NEEDS WORK - add more rhymes)'})
+        else:
+            logs.append({'type': 'error', 'message': f'Rhyme Factor: {rf:.3f} (POOR - increase rhyme density)'})
+        
+        perfect_rhymes = bars_result.get('perfect_rhymes', 0)
+        slant_rhymes = bars_result.get('slant_rhymes', 0)
+        metrics['perfect_rhymes'] = perfect_rhymes
+        metrics['slant_rhymes'] = slant_rhymes
+        logs.append({'type': 'info', 'message': f'Perfect Rhymes: {perfect_rhymes} | Slant Rhymes: {slant_rhymes}'})
+        
+        multis = bars_result.get('multisyllabic_count', 0)
+        metrics['multisyllabic_count'] = multis
+        if multis >= 5:
+            logs.append({'type': 'success', 'message': f'Multisyllabic Rhymes: {multis} (strong technical density)'})
+        elif multis >= 2:
+            logs.append({'type': 'warning', 'message': f'Multisyllabic Rhymes: {multis} (add more for complexity)'})
+        else:
+            logs.append({'type': 'error', 'message': f'Multisyllabic Rhymes: {multis} (critical: needs multis)'})
+        
+        assonance = bars_result.get('assonance_chains', [])
+        metrics['assonance_chain_count'] = len(assonance)
+        if assonance:
+            logs.append({'type': 'info', 'message': f'Assonance Chains Found: {len(assonance)}'})
+            for chain in assonance[:3]:
+                logs.append({'type': 'tip', 'message': f'  Chain: {chain}'})
+        
+        word_coverage = bars_result.get('word_coverage', 0)
+        metrics['word_coverage'] = word_coverage
+        logs.append({'type': 'info', 'message': f'Word Coverage: {word_coverage:.1%} of words participate in rhymes'})
+        
+    except Exception as e:
+        logs.append({'type': 'error', 'message': f'BarsAnalyzer failed: {str(e)}'})
+    
+    logs.append({'type': 'info', 'message': '─── FlowAnalyzer (Rhythmic Dynamics) ───'})
+    try:
+        flow_result = flow_analyzer.analyze(lyrics, bpm=project.get('bpm', 140))
+        
+        velocity = flow_result.get('syllable_velocity', 0)
+        metrics['syllable_velocity'] = velocity
+        logs.append({'type': 'info', 'message': f'Syllable Velocity: {velocity:.2f} syllables/second'})
+        
+        compliance = flow_result.get('syllable_compliance', 0)
+        metrics['syllable_compliance'] = compliance
+        if compliance >= 0.8:
+            logs.append({'type': 'success', 'message': f'Syllable Compliance: {compliance:.1%} (excellent meter)'})
+        elif compliance >= 0.6:
+            logs.append({'type': 'warning', 'message': f'Syllable Compliance: {compliance:.1%} (some meter issues)'})
+        else:
+            logs.append({'type': 'error', 'message': f'Syllable Compliance: {compliance:.1%} (inconsistent rhythm)'})
+        
+        pdi = flow_result.get('plosive_density_index', 0)
+        metrics['plosive_density_index'] = pdi
+        if pdi >= 0.15:
+            logs.append({'type': 'success', 'message': f'Plosive Density Index: {pdi:.3f} (punchy delivery)'})
+        elif pdi >= 0.10:
+            logs.append({'type': 'info', 'message': f'Plosive Density Index: {pdi:.3f} (moderate punch)'})
+        else:
+            logs.append({'type': 'warning', 'message': f'Plosive Density Index: {pdi:.3f} (add P/B/T/D/K/G sounds)'})
+        
+        flow_class = flow_result.get('flow_classification', 'unknown')
+        metrics['flow_classification'] = flow_class
+        logs.append({'type': 'info', 'message': f'Flow Classification: {flow_class}'})
+        
+        consistency = flow_result.get('flow_consistency', 0)
+        metrics['flow_consistency'] = consistency
+        if consistency >= 0.7:
+            logs.append({'type': 'success', 'message': f'Flow Consistency: {consistency:.1%}'})
+        else:
+            logs.append({'type': 'warning', 'message': f'Flow Consistency: {consistency:.1%} (normalize syllables)'})
+        
+        breath_points = flow_result.get('breath_points', [])
+        metrics['breath_point_count'] = len(breath_points)
+        if breath_points:
+            logs.append({'type': 'info', 'message': f'Natural Breath Points: {len(breath_points)} detected'})
+        
+    except Exception as e:
+        logs.append({'type': 'error', 'message': f'FlowAnalyzer failed: {str(e)}'})
+    
+    logs.append({'type': 'info', 'message': '─── VowelAnalyzer (Phonetic Texture) ───'})
+    try:
+        vowel_result = vowel_analyzer.analyze(lyrics)
+        
+        entropy = vowel_result.get('vowel_entropy', 0)
+        metrics['vowel_entropy'] = entropy
+        logs.append({'type': 'info', 'message': f'Vowel Entropy: {entropy:.3f} (variation in vowel sounds)'})
+        
+        earworm = vowel_result.get('earworm_score', 0)
+        metrics['earworm_score'] = earworm
+        if earworm >= 0.7:
+            logs.append({'type': 'success', 'message': f'Earworm Score: {earworm:.2f} (highly memorable)'})
+        elif earworm >= 0.5:
+            logs.append({'type': 'info', 'message': f'Earworm Score: {earworm:.2f} (moderately catchy)'})
+        else:
+            logs.append({'type': 'warning', 'message': f'Earworm Score: {earworm:.2f} (increase repetition)'})
+        
+        euphony = vowel_result.get('euphony_score', 0)
+        metrics['euphony_score'] = euphony
+        logs.append({'type': 'info', 'message': f'Euphony Score: {euphony:.2f} (pleasantness of sound)'})
+        
+    except Exception as e:
+        logs.append({'type': 'error', 'message': f'VowelAnalyzer failed: {str(e)}'})
+    
+    logs.append({'type': 'info', 'message': '─── MemeAnalyzer (Cultural Quotability) ───'})
+    try:
+        meme_result = meme_analyzer.analyze(lyrics)
+        
+        meme_score = meme_result.get('meme_score', 0)
+        metrics['meme_score'] = meme_score
+        if meme_score >= 0.7:
+            logs.append({'type': 'success', 'message': f'Meme Score: {meme_score:.2f} (high viral potential)'})
+        elif meme_score >= 0.4:
+            logs.append({'type': 'info', 'message': f'Meme Score: {meme_score:.2f} (moderate shareability)'})
+        else:
+            logs.append({'type': 'warning', 'message': f'Meme Score: {meme_score:.2f} (needs quotable moments)'})
+        
+        quotables = meme_result.get('quotable_lines', [])
+        metrics['quotable_line_count'] = len(quotables)
+        if quotables:
+            logs.append({'type': 'info', 'message': f'Quotable Lines Found: {len(quotables)}'})
+            for line in quotables[:3]:
+                logs.append({'type': 'tip', 'message': f'  "{line}"'})
+        
+        punchlines = meme_result.get('punchline_count', 0)
+        metrics['punchline_count'] = punchlines
+        logs.append({'type': 'info', 'message': f'Punchlines Detected: {punchlines}'})
+        
+    except Exception as e:
+        logs.append({'type': 'error', 'message': f'MemeAnalyzer failed: {str(e)}'})
+    
+    logs.append({'type': 'info', 'message': '═══ ANALYSIS COMPLETE ═══'})
+    
+    return {
+        'console_logs': logs,
+        'metrics': metrics
+    }
 
 
 def build_api_payload(project: dict, lyrics: str) -> dict:

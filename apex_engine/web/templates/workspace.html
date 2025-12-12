@@ -38,6 +38,41 @@
             color: #fff;
         }
         
+        .optimize-field-btn {
+            width: 26px;
+            height: 20px;
+            border-radius: 4px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent));
+            border: none;
+            color: #fff;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .optimize-field-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+        }
+        
+        .optimize-field-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .optimize-field-btn.loading {
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
         .char-counter {
             font-size: 0.7rem;
             color: var(--text-secondary);
@@ -422,6 +457,8 @@
                 <div class="seed-component">
                     <div class="section-header">
                         <label>Prompt / Description</label>
+                        <button type="button" class="help-btn" onclick="openFieldHelp('prompt_text')">?</button>
+                        <button type="button" class="optimize-field-btn" onclick="optimizeField('prompt_text')" title="Optimize with AI">AI</button>
                     </div>
                     <p class="component-hint">Texture, atmosphere, instrumentation</p>
                     <textarea id="prompt-text" rows="2" placeholder="High-fidelity production with heavy 808s, wide stereo imaging...">{{ project.prompt_text or '' }}</textarea>
@@ -431,6 +468,8 @@
                 <div class="seed-component lyrics">
                     <div class="section-header">
                         <label>Lyrics</label>
+                        <button type="button" class="help-btn" onclick="openFieldHelp('lyrics_text')">?</button>
+                        <button type="button" class="optimize-field-btn" onclick="optimizeField('lyrics_text')" title="Optimize with AI">AI</button>
                     </div>
                     <p class="component-hint">Use [Verse], [Chorus] tags. Line breaks = pauses.</p>
                     <textarea id="lyrics-text" rows="6" placeholder="[Intro]
@@ -449,6 +488,8 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
                     <div class="seed-component">
                         <div class="section-header">
                             <label>Neuropsychological Effects</label>
+                            <button type="button" class="help-btn" onclick="openFieldHelp('neuro_effects')">?</button>
+                            <button type="button" class="optimize-field-btn" onclick="optimizeField('neuro_effects')" title="Optimize with AI">AI</button>
                         </div>
                         <p class="component-hint">Frisson triggers, tension/release</p>
                         <textarea id="neuro-effects" rows="2" placeholder="Build tension in verse, release on chorus...">{{ project.neuro_effects or '' }}</textarea>
@@ -458,6 +499,8 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
                     <div class="seed-component">
                         <div class="section-header">
                             <label>Neurochemical Targets</label>
+                            <button type="button" class="help-btn" onclick="openFieldHelp('neurochemical_effects')">?</button>
+                            <button type="button" class="optimize-field-btn" onclick="optimizeField('neurochemical_effects')" title="Optimize with AI">AI</button>
                         </div>
                         <p class="component-hint">Syncopation, groove, dopamine hooks</p>
                         <textarea id="neurochemical-effects" rows="2" placeholder="Syncopated hi-hats for prediction error...">{{ project.neurochemical_effects or '' }}</textarea>
@@ -467,6 +510,8 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
                     <div class="seed-component">
                         <div class="section-header">
                             <label>Musical Effects</label>
+                            <button type="button" class="help-btn" onclick="openFieldHelp('musical_effects')">?</button>
+                            <button type="button" class="optimize-field-btn" onclick="optimizeField('musical_effects')" title="Optimize with AI">AI</button>
                         </div>
                         <p class="component-hint">Production, mixing, references</p>
                         <textarea id="musical-effects" rows="2" placeholder="Half-time verse, double-time chorus...">{{ project.musical_effects or '' }}</textarea>
@@ -1147,6 +1192,142 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
                 addConsoleLine('error', 'Magic Fill request failed: ' + e.message);
             } finally {
                 hideLoading();
+            }
+        }
+        
+        let analysisContext = {
+            console_logs: [],
+            metrics: {}
+        };
+        
+        const fieldToTextareaId = {
+            'prompt_text': 'prompt-text',
+            'lyrics_text': 'lyrics-text',
+            'neuro_effects': 'neuro-effects',
+            'neurochemical_effects': 'neurochemical-effects',
+            'musical_effects': 'musical-effects'
+        };
+        
+        async function runFullAnalysis() {
+            const lyrics = document.getElementById('lyrics-text').value || document.getElementById('lyrics-editor').value;
+            if (!lyrics.trim()) {
+                addConsoleLine('warning', 'No lyrics to analyze. Enter lyrics first.');
+                return false;
+            }
+            
+            addConsoleLine('info', 'Running comprehensive agent analysis...');
+            
+            try {
+                const response = await fetch('/api/run-full-analysis', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        project_id: projectId,
+                        lyrics: lyrics
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    analysisContext.console_logs = data.console_logs;
+                    analysisContext.metrics = data.metrics;
+                    
+                    data.console_logs.forEach(log => {
+                        addConsoleLine(log.type, log.message);
+                    });
+                    
+                    return true;
+                } else {
+                    addConsoleLine('error', 'Full analysis failed: ' + (data.error || 'Unknown error'));
+                    return false;
+                }
+            } catch (e) {
+                addConsoleLine('error', 'Analysis request failed: ' + e.message);
+                return false;
+            }
+        }
+        
+        async function optimizeField(fieldName) {
+            const textareaId = fieldToTextareaId[fieldName];
+            if (!textareaId) {
+                addConsoleLine('error', `Unknown field: ${fieldName}`);
+                return;
+            }
+            
+            const textarea = document.getElementById(textareaId);
+            const currentValue = textarea.value;
+            
+            const btn = textarea.closest('.seed-component').querySelector('.optimize-field-btn');
+            btn.classList.add('loading');
+            btn.disabled = true;
+            
+            addConsoleLine('info', `Optimizing ${fieldName.replace('_', ' ')} with AI...`);
+            
+            if (analysisContext.console_logs.length === 0) {
+                addConsoleLine('info', 'Running analysis first to gather context...');
+                await runFullAnalysis();
+            }
+            
+            try {
+                const response = await fetch('/api/optimize-field', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        project_id: projectId,
+                        field_name: fieldName,
+                        current_value: currentValue,
+                        console_logs: analysisContext.console_logs,
+                        metrics: analysisContext.metrics
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.optimized_value) {
+                        textarea.value = data.optimized_value;
+                        textarea.dispatchEvent(new Event('input'));
+                    }
+                    
+                    addConsoleLine('success', `${fieldName.replace('_', ' ')} optimized successfully`);
+                    
+                    if (data.changes_made && Array.isArray(data.changes_made)) {
+                        data.changes_made.forEach(change => {
+                            addConsoleLine('tip', `Change: ${change}`);
+                        });
+                    }
+                    
+                    if (data.reasoning) {
+                        addConsoleLine('info', `Reasoning: ${data.reasoning}`);
+                    }
+                } else {
+                    addConsoleLine('error', 'Optimization failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                addConsoleLine('error', 'Optimization request failed: ' + e.message);
+            } finally {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+        
+        async function openFieldHelp(fieldName) {
+            try {
+                const response = await fetch(`/api/field-help/${fieldName}`);
+                const data = await response.json();
+                
+                if (data.success && data.help) {
+                    const helpText = typeof data.help === 'object' 
+                        ? Object.entries(data.help).map(([k, v]) => `${k}: ${v}`).join('\n\n')
+                        : data.help;
+                    
+                    alert(`${fieldName.replace('_', ' ').toUpperCase()} Help:\n\n${helpText}`);
+                } else {
+                    alert(`No help available for ${fieldName}`);
+                }
+            } catch (e) {
+                console.error('Failed to load field help:', e);
             }
         }
     </script>
