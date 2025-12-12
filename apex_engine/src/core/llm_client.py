@@ -159,6 +159,110 @@ class LLMClient:
         has_direct_key = bool(self.api_key and not self.base_url)
         return OPENAI_AVAILABLE and (has_replit_integration or has_direct_key)
     
+    def _get_field_knowledge_context(self, field_name: str) -> str:
+        """
+        Get comprehensive knowledge base context for a field from attached documentation.
+        This injects examples and best practices from the documentation into AI prompts.
+        """
+        try:
+            from apex_engine.config.knowledge_base import (
+                PROMPT_ENGINEERING, LYRICS_STRUCTURE, NEUROPSYCHOLOGICAL_EFFECTS,
+                NEUROCHEMICAL_TARGETS, MUSICAL_EFFECTS, RAPLYZER_PROTOCOL,
+                FLOW_ANALYSIS, MEME_QUOTABILITY, SONAUTO_TAG_TAXONOMY
+            )
+        except ImportError:
+            return "(Knowledge base not available)"
+        
+        context_parts = []
+        
+        if field_name == 'prompt_text':
+            context_parts.append("=== PROMPT ENGINEERING FOR SONAUTO ===")
+            context_parts.append(PROMPT_ENGINEERING.get('overview', ''))
+            context_parts.append("\nINSTRUMENTATION TERMS:")
+            context_parts.append(", ".join(PROMPT_ENGINEERING.get('instrumentation_examples', [])))
+            context_parts.append("\nVOCAL DELIVERY TERMS:")
+            context_parts.append(", ".join(PROMPT_ENGINEERING.get('vocal_delivery_examples', [])))
+            context_parts.append("\nATMOSPHERE DESCRIPTORS:")
+            context_parts.append(", ".join(PROMPT_ENGINEERING.get('atmosphere_examples', [])))
+            context_parts.append("\nPRODUCTION QUALIFIERS:")
+            context_parts.append(", ".join(PROMPT_ENGINEERING.get('production_qualifiers', [])))
+            context_parts.append("\nFULL PROMPT EXAMPLES:")
+            for ex in PROMPT_ENGINEERING.get('full_examples', [])[:3]:
+                context_parts.append(f"- {ex.get('style', '')}: {ex.get('prompt', '')}")
+        
+        elif field_name == 'lyrics_text':
+            context_parts.append("=== LYRICS STRUCTURE & RHYME OPTIMIZATION ===")
+            context_parts.append(LYRICS_STRUCTURE.get('overview', ''))
+            context_parts.append("\nSTRUCTURAL TAGS:")
+            for tag, desc in LYRICS_STRUCTURE.get('structural_tags', {}).items():
+                context_parts.append(f"  {tag}: {desc}")
+            context_parts.append("\nSYLLABLES PER BAR BY BPM:")
+            for bpm, syl in LYRICS_STRUCTURE.get('length_guidelines', {}).get('syllables_per_bar', {}).items():
+                context_parts.append(f"  {bpm}: {syl}")
+            context_parts.append("\n=== RAPLYZER RHYME PROTOCOL ===")
+            context_parts.append("Rhyme Factor targets:")
+            for tier, desc in RAPLYZER_PROTOCOL.get('rhyme_factor', {}).get('interpretation', {}).items():
+                context_parts.append(f"  {tier}: {desc}")
+            context_parts.append("\nMultisyllabic rhymes (multis) = rhymes matching 2+ vowels")
+            context_parts.append("Assonance chains = repeated vowel sounds creating internal rhyme patterns")
+            context_parts.append("\n=== QUOTABILITY CRITERIA ===")
+            for criterion in MEME_QUOTABILITY.get('criteria', []):
+                context_parts.append(f"- {criterion.get('name', '')}: {criterion.get('description', '')}")
+        
+        elif field_name == 'neuro_effects':
+            context_parts.append("=== NEUROPSYCHOLOGICAL EFFECTS (FRISSON) ===")
+            context_parts.append(NEUROPSYCHOLOGICAL_EFFECTS.get('overview', ''))
+            context_parts.append("\nFRISSON TRIGGERS:")
+            for trigger in NEUROPSYCHOLOGICAL_EFFECTS.get('frisson_triggers', []):
+                context_parts.append(f"- {trigger.get('name', '')}: {trigger.get('description', '')}. Example: {trigger.get('example', '')}")
+            context_parts.append("\nDROP MECHANICS:")
+            drop = NEUROPSYCHOLOGICAL_EFFECTS.get('drop_mechanics', {})
+            context_parts.append(f"{drop.get('description', '')}. {drop.get('technique', '')}")
+            context_parts.append("\nEXAMPLES:")
+            for ex in NEUROPSYCHOLOGICAL_EFFECTS.get('examples', []):
+                context_parts.append(f"- {ex}")
+        
+        elif field_name == 'neurochemical_effects':
+            context_parts.append("=== NEUROCHEMICAL TARGETS (DOPAMINE/GROOVE) ===")
+            context_parts.append(NEUROCHEMICAL_TARGETS.get('overview', ''))
+            sync = NEUROCHEMICAL_TARGETS.get('syncopation_index', {})
+            context_parts.append(f"\nSYNCOPATION INDEX GOLDILOCKS ZONE:")
+            for zone, desc in sync.get('goldilocks_zone', {}).items():
+                context_parts.append(f"  {zone}: {desc}")
+            context_parts.append("\nGROOVE ELEMENTS:")
+            for elem in NEUROCHEMICAL_TARGETS.get('groove_elements', []):
+                context_parts.append(f"- {elem.get('name', '')}: {elem.get('description', '')}. Example: {elem.get('example', '')}")
+            context_parts.append("\nEARWORM MECHANICS:")
+            for mech in NEUROCHEMICAL_TARGETS.get('earworm_mechanics', {}).get('elements', []):
+                context_parts.append(f"- {mech}")
+            context_parts.append("\nEXAMPLES:")
+            for ex in NEUROCHEMICAL_TARGETS.get('examples', []):
+                context_parts.append(f"- {ex}")
+        
+        elif field_name == 'musical_effects':
+            context_parts.append("=== MUSICAL EFFECTS & SONAUTO PARAMETERS ===")
+            context_parts.append(MUSICAL_EFFECTS.get('overview', ''))
+            context_parts.append("\nBALANCE_STRENGTH (Vocal/Instrumental Mix):")
+            for range_val, desc in MUSICAL_EFFECTS.get('balance_strength', {}).get('recommendations', {}).items():
+                context_parts.append(f"  {range_val}: {desc}")
+            context_parts.append("\nPROMPT_STRENGTH (CFG Scale):")
+            for range_val, desc in MUSICAL_EFFECTS.get('prompt_strength', {}).get('recommendations', {}).items():
+                context_parts.append(f"  {range_val}: {desc}")
+            context_parts.append("\nTAG ORDERING (Higher weight first):")
+            for i, tag_type in enumerate(MUSICAL_EFFECTS.get('tag_ordering', {}).get('recommended_order', []), 1):
+                context_parts.append(f"  {i}. {tag_type}")
+            context_parts.append("\n=== SONAUTO TAG TAXONOMY ===")
+            for cat_key, cat_data in list(SONAUTO_TAG_TAXONOMY.items())[:4]:
+                context_parts.append(f"{cat_data.get('title', '')}: {', '.join(cat_data.get('tags', []))}")
+            context_parts.append("\nEXAMPLES:")
+            for ex in MUSICAL_EFFECTS.get('examples', []):
+                context_parts.append(f"- {ex}")
+        
+        else:
+            context_parts.append("(No specific knowledge context for this field)")
+        
+        return "\n".join(context_parts)
+    
     def generate_lyrics(
         self,
         seed_text: str,
@@ -732,6 +836,7 @@ Provide analysis as JSON with keys: score (1-10), analysis (string), strengths (
         
         This method takes the accumulated console logs from algorithmic analysis
         and uses them to provide targeted, incremental improvements to a single field.
+        Now includes comprehensive knowledge base context from attached documentation.
         
         Args:
             field_name: Name of the field to optimize (e.g., 'lyrics_text', 'prompt_text')
@@ -754,6 +859,8 @@ Provide analysis as JSON with keys: score (1-10), analysis (string), strengths (
         optimization_focus = field_config.get('optimization_focus', 'General improvement')
         relevant_metrics = field_config.get('metrics', [])
         
+        knowledge_context = self._get_field_knowledge_context(field_name)
+        
         metrics_text = ""
         if analysis_context.get('metrics'):
             metrics_text = "\n".join([
@@ -768,28 +875,32 @@ Provide analysis as JSON with keys: score (1-10), analysis (string), strengths (
                 for log in analysis_context['console_logs'][-20:]
             ])
         
-        system_prompt = f"""You are an expert music producer optimizing rap lyrics and production settings.
+        system_prompt = f"""You are an expert music producer optimizing rap lyrics and production settings for the Sonauto API.
 
-Your task: Optimize the "{field_name}" field based on the analysis context.
+Your task: Optimize the "{field_name}" field based on the analysis context and knowledge base.
 
 **Optimization Focus**: {optimization_focus}
 
 **Relevant Metrics to Improve**:
 {', '.join(relevant_metrics) if relevant_metrics else 'General quality metrics'}
 
+**KNOWLEDGE BASE CONTEXT**:
+{knowledge_context}
+
 Rules:
 1. Make targeted, incremental improvements - don't rewrite everything
 2. Reference specific metric deficiencies when making changes
 3. Preserve the artist's voice and intent
-4. For lyrics: maximize rhyme density, add multisyllabic rhymes, improve flow
-5. For prompt_text: use specific textural descriptors for latent diffusion
-6. For neuro_effects: target frisson triggers (dynamic surges, spectral expansion)
-7. For neurochemical_effects: optimize syncopation and groove parameters
-8. For musical_effects: specify production techniques precisely
+4. Use SPECIFIC EXAMPLES from the knowledge base context above
+5. For lyrics: maximize rhyme density using Raplyzer protocol, add multis, assonance chains
+6. For prompt_text: use instrumentation terms, vocal delivery, atmosphere descriptors from knowledge base
+7. For neuro_effects: target frisson triggers (dynamic surges, spectral expansion, expectation violation)
+8. For neurochemical_effects: optimize syncopation index (target 15-30), groove elements, earworm mechanics
+9. For musical_effects: use balance_strength/prompt_strength guidance, tag ordering from knowledge base
 
 Return JSON with:
 - optimized_value: The improved content
-- changes_made: List of specific changes
+- changes_made: List of specific changes with references to knowledge base concepts
 - reasoning: Why each change improves the target metrics"""
 
         user_prompt = f"""**Field**: {field_name}
@@ -808,7 +919,7 @@ Return JSON with:
 **Analysis Console Logs**:
 {console_logs_text or "(No analysis run yet)"}
 
-Optimize this field to improve the relevant metrics. Make targeted improvements that directly address any issues shown in the console logs."""
+Optimize this field using the knowledge base examples and best practices. Make targeted improvements that directly address any issues shown in the console logs."""
 
         try:
             response = self.client.chat.completions.create(

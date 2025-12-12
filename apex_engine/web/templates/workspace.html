@@ -506,9 +506,10 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
                     <div class="section-header">
                         <label>Musical Effects</label>
                         <button type="button" class="help-btn" onclick="openFieldHelp('musical_effects')">?</button>
+                        <button type="button" class="help-btn" onclick="openTagExplorer()" title="Tag Explorer" style="background: linear-gradient(135deg, var(--accent-purple), var(--accent)); color: #fff; border: none;">T</button>
                         <button type="button" class="optimize-field-btn" onclick="optimizeField('musical_effects')" title="Optimize with AI">AI</button>
                     </div>
-                    <p class="component-hint">Production, mixing, references</p>
+                    <p class="component-hint">Production, mixing, references. <a href="#" onclick="openTagExplorer(); return false;" style="color: var(--accent);">Open Tag Explorer</a></p>
                     <textarea id="musical-effects" rows="2" placeholder="Half-time verse, double-time chorus...">{{ project.musical_effects or '' }}</textarea>
                     <div class="char-counter" id="musicalCounter">0 / 300 chars</div>
                 </div>
@@ -716,6 +717,34 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
                         <li><strong>2.5-4.0:</strong> Aggressive (phonk, drill, industrial)</li>
                     </ul>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="fieldHelpModal">
+        <div class="modal-box" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 id="fieldHelpTitle">Field Help</h3>
+                <button class="modal-close" onclick="closeModal('fieldHelpModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="fieldHelpContent">
+                <div class="loading-state active">
+                    <div class="loading-spinner"></div>
+                    <span>Loading help content...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="tagExplorerModal">
+        <div class="modal-box" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>Sonauto Tag Explorer</h3>
+                <button class="modal-close" onclick="closeModal('tagExplorerModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="tagExplorerContent">
+                <p class="section-hint">Click a tag to copy it. Tags at the top of your list have higher weight.</p>
+                <div id="tagCategories"></div>
             </div>
         </div>
     </div>
@@ -1345,23 +1374,233 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
         }
         
         async function openFieldHelp(fieldName) {
+            const titleEl = document.getElementById('fieldHelpTitle');
+            const contentEl = document.getElementById('fieldHelpContent');
+            
+            titleEl.textContent = fieldName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) + ' Help';
+            contentEl.innerHTML = `
+                <div class="loading-state active">
+                    <div class="loading-spinner"></div>
+                    <span>Loading comprehensive help...</span>
+                </div>
+            `;
+            
+            openModal('fieldHelpModal');
+            
             try {
                 const response = await fetch(`/api/field-help/${fieldName}`);
                 const data = await response.json();
                 
                 if (data.success && data.help) {
-                    const helpText = typeof data.help === 'object' 
-                        ? Object.entries(data.help).map(([k, v]) => `${k}: ${v}`).join('\n\n')
-                        : data.help;
-                    
-                    alert(`${fieldName.replace('_', ' ').toUpperCase()} Help:\n\n${helpText}`);
+                    if (data.has_rich_content && data.help.sections) {
+                        contentEl.innerHTML = renderRichHelp(data.help);
+                    } else {
+                        contentEl.innerHTML = renderSimpleHelp(data.help);
+                    }
                 } else {
-                    alert(`No help available for ${fieldName}`);
+                    contentEl.innerHTML = '<p class="error">No help available for this field.</p>';
                 }
             } catch (e) {
-                console.error('Failed to load field help:', e);
+                contentEl.innerHTML = `<p class="error">Failed to load help: ${e.message}</p>`;
+            }
+        }
+        
+        function renderRichHelp(help) {
+            let html = '';
+            
+            for (const section of help.sections || []) {
+                html += `<div class="guidance-section">`;
+                html += `<h4>${escapeHtml(section.title)}</h4>`;
+                
+                switch (section.type) {
+                    case 'text':
+                        html += `<p>${escapeHtml(section.content)}</p>`;
+                        break;
+                    
+                    case 'list':
+                        html += '<ul>';
+                        for (const item of section.content || []) {
+                            const escaped = escapeHtml(item);
+                            const formatted = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                            html += `<li>${formatted}</li>`;
+                        }
+                        html += '</ul>';
+                        break;
+                    
+                    case 'tags':
+                        html += '<div class="tag-list">';
+                        for (const tag of section.content || []) {
+                            html += `<span class="tag-chip" onclick="copyTag('${escapeHtml(tag)}')">${escapeHtml(tag)}</span>`;
+                        }
+                        html += '</div>';
+                        break;
+                    
+                    case 'key_value':
+                        html += '<ul>';
+                        for (const [key, value] of Object.entries(section.content || {})) {
+                            html += `<li><strong>${escapeHtml(key)}:</strong> ${escapeHtml(value)}</li>`;
+                        }
+                        html += '</ul>';
+                        break;
+                    
+                    case 'examples':
+                        for (const example of section.content || []) {
+                            html += `<div class="example-block">`;
+                            if (example.style) {
+                                html += `<div class="example-style"><strong>${escapeHtml(example.style)}</strong></div>`;
+                            }
+                            html += `<div class="example-prompt">${escapeHtml(example.prompt)}</div>`;
+                            html += `</div>`;
+                        }
+                        break;
+                    
+                    case 'code':
+                        html += `<pre class="code-block">${escapeHtml(section.content)}</pre>`;
+                        break;
+                    
+                    default:
+                        html += `<p>${escapeHtml(String(section.content))}</p>`;
+                }
+                
+                html += '</div>';
+            }
+            
+            return html;
+        }
+        
+        function renderSimpleHelp(help) {
+            let html = '<div class="guidance-section">';
+            
+            if (typeof help === 'string') {
+                html += `<p>${escapeHtml(help)}</p>`;
+            } else if (typeof help === 'object') {
+                if (help.tooltip) {
+                    html += `<p>${escapeHtml(help.tooltip)}</p>`;
+                }
+                if (help.tips) {
+                    html += '<h4>Tips</h4><ul>';
+                    for (const tip of help.tips) {
+                        html += `<li>${escapeHtml(tip)}</li>`;
+                    }
+                    html += '</ul>';
+                }
+                if (help.examples) {
+                    html += '<h4>Examples</h4><ul>';
+                    for (const ex of help.examples) {
+                        html += `<li>${escapeHtml(ex)}</li>`;
+                    }
+                    html += '</ul>';
+                }
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+        
+        function copyTag(tag) {
+            navigator.clipboard.writeText(tag).then(() => {
+                addConsoleLine('info', `Copied tag: "${tag}"`);
+            }).catch(() => {
+                addConsoleLine('warning', `Copy failed for: "${tag}"`);
+            });
+        }
+        
+        async function openTagExplorer() {
+            openModal('tagExplorerModal');
+            const container = document.getElementById('tagCategories');
+            container.innerHTML = '<div class="loading-state active"><div class="loading-spinner"></div><span>Loading tags...</span></div>';
+            
+            try {
+                const response = await fetch('/api/tag-explorer');
+                const data = await response.json();
+                
+                if (data.success && data.taxonomy) {
+                    let html = '';
+                    
+                    for (const [key, category] of Object.entries(data.taxonomy)) {
+                        html += `<div class="tag-category">`;
+                        html += `<h4>${escapeHtml(category.title)}</h4>`;
+                        html += `<p class="component-hint">${escapeHtml(category.description)}</p>`;
+                        html += '<div class="tag-list">';
+                        
+                        for (const tag of category.tags || []) {
+                            html += `<span class="tag-chip" onclick="copyTag('${escapeHtml(tag)}')">${escapeHtml(tag)}</span>`;
+                        }
+                        
+                        html += '</div>';
+                        
+                        if (typeof category.acoustic_implication === 'object') {
+                            html += '<div class="implication-details" style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary);">';
+                            for (const [subKey, subVal] of Object.entries(category.acoustic_implication)) {
+                                html += `<div><strong>${escapeHtml(subKey)}:</strong> ${escapeHtml(subVal)}</div>`;
+                            }
+                            html += '</div>';
+                        }
+                        
+                        html += '</div>';
+                    }
+                    
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p class="error">Failed to load tag taxonomy</p>';
+                }
+            } catch (e) {
+                container.innerHTML = `<p class="error">Error: ${e.message}</p>`;
             }
         }
     </script>
+    
+    <style>
+        .example-block {
+            background: var(--bg-tertiary);
+            border-left: 3px solid var(--accent);
+            padding: 10px 12px;
+            margin: 8px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .example-style {
+            color: var(--accent);
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+        }
+        
+        .example-prompt {
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        
+        .code-block {
+            background: #0d0d0d;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            color: #4ade80;
+        }
+        
+        .implication-details {
+            background: var(--bg-secondary);
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+        
+        .tag-chip.copied {
+            background: var(--accent);
+            color: #fff;
+        }
+    </style>
 </body>
 </html>

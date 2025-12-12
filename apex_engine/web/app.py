@@ -442,18 +442,65 @@ def api_analyze_lyrics(project_id, analysis_type):
 
 @app.route('/api/field-help/<field_name>', methods=['GET'])
 def api_field_help(field_name):
-    """API: Get help text for a specific field."""
+    """API: Get comprehensive help content for a specific field."""
     try:
+        from apex_engine.config.knowledge_base import get_field_help_content
         from apex_engine.config.ui_text_config import FIELD_HELP, AGENT_DESCRIPTIONS
         
-        if field_name in FIELD_HELP:
-            return jsonify({'success': True, 'help': FIELD_HELP[field_name]})
+        comprehensive_help = get_field_help_content(field_name)
+        
+        if comprehensive_help and comprehensive_help.get('sections'):
+            return jsonify({
+                'success': True, 
+                'help': comprehensive_help,
+                'has_rich_content': True
+            })
+        elif field_name in FIELD_HELP:
+            return jsonify({
+                'success': True, 
+                'help': FIELD_HELP[field_name],
+                'has_rich_content': False
+            })
         elif field_name in AGENT_DESCRIPTIONS:
-            return jsonify({'success': True, 'help': AGENT_DESCRIPTIONS[field_name]})
+            return jsonify({
+                'success': True, 
+                'help': AGENT_DESCRIPTIONS[field_name],
+                'has_rich_content': False
+            })
         else:
             return jsonify({'success': False, 'error': 'Field not found'}), 404
             
     except Exception as e:
+        logger.error(f"Field help failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/tag-explorer', methods=['GET'])
+def api_tag_explorer():
+    """API: Get full Sonauto tag taxonomy for the Tag Explorer modal."""
+    try:
+        from apex_engine.config.knowledge_base import get_tag_explorer_data
+        return jsonify({
+            'success': True,
+            'taxonomy': get_tag_explorer_data()
+        })
+    except Exception as e:
+        logger.error(f"Tag explorer failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/field-context/<field_name>', methods=['GET'])
+def api_field_context(field_name):
+    """API: Get knowledge context for AI field optimization."""
+    try:
+        from apex_engine.config.knowledge_base import get_field_context
+        context = get_field_context(field_name)
+        return jsonify({
+            'success': True,
+            'context': context
+        })
+    except Exception as e:
+        logger.error(f"Field context failed: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
