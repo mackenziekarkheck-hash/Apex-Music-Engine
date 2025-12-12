@@ -1,10 +1,10 @@
 """
-Pydantic Models for Sonauto/Fal.ai API Integration.
+Pydantic Models for Sonauto API Integration.
 
 These models provide rigorous validation for all API payloads,
 ensuring correct formatting before requests are sent.
 
-Architecture: Uses fal_client SDK (not raw HTTP requests)
+Architecture: Uses direct Sonauto REST API calls
 Reference: Neo-Apex Architecture Documentation
 """
 
@@ -33,10 +33,10 @@ class ExtendSide(str, Enum):
 
 
 class SonautoModel(str, Enum):
-    """Canonical fal.ai model endpoints for Sonauto V2."""
-    TEXT_TO_MUSIC = "fal-ai/sonauto/v2/text-to-music"
-    INPAINT = "fal-ai/sonauto/v2/inpaint"
-    EXTEND = "fal-ai/sonauto/v2/extend"
+    """Canonical Sonauto API endpoints."""
+    TEXT_TO_MUSIC = "songs"
+    INPAINT = "songs/inpaint"
+    EXTEND = "songs/extend"
 
 
 def _load_tag_database_once() -> Tuple[List[str], FrozenSet[str]]:
@@ -194,8 +194,8 @@ class SonautoGenerationRequest(BaseModel):
                 raise ValueError("BPM must be between 40 and 240")
         return v
     
-    def to_fal_payload(self) -> dict:
-        """Convert to fal_client arguments format."""
+    def to_sonauto_payload(self) -> dict:
+        """Convert to Sonauto API payload format."""
         payload = {
             'prompt': self.prompt,
             'tags': self.tags,
@@ -301,11 +301,11 @@ class SonautoInpaintRequest(BaseModel):
             logger.warning(f"Tags not in taxonomy: {invalid}")
         return normalized
     
-    def to_fal_payload(self) -> dict:
+    def to_sonauto_payload(self) -> dict:
         """
-        Convert to fal_client arguments format.
+        Convert to Sonauto API payload format.
         
-        Note: fal_client uses {"start": x, "end": y} object format for sections
+        Note: Sonauto uses {"start": x, "end": y} object format for sections
         """
         payload = {
             'audio_url': self.audio_url,
@@ -383,8 +383,8 @@ class SonautoExtendRequest(BaseModel):
         normalized, _ = validate_tags_o1(v)
         return normalized
     
-    def to_fal_payload(self) -> dict:
-        """Convert to fal_client arguments format."""
+    def to_sonauto_payload(self) -> dict:
+        """Convert to Sonauto API payload format."""
         payload = {
             'audio_url': self.audio_url,
             'side': self.side.value,

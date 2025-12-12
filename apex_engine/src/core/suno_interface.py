@@ -1,13 +1,13 @@
 """
-Sonauto Interface - Fal.ai SDK Client for Audio Generation.
+Sonauto Interface - Direct Sonauto API Client for Audio Generation.
 
-This module provides the Neo-Apex interface to Sonauto via fal_client SDK:
+This module provides the Neo-Apex interface to Sonauto API directly:
 - Song generation with CFG scale control (prompt_strength)
 - Inpainting with correct section format
 - Extension with side and crop_duration parameters
-- Async-first with webhook support and polling fallback
+- Uses standard requests library for REST API calls
 
-Architecture: Uses fal_client SDK (NOT raw HTTP requests)
+Architecture: Uses direct REST API calls (requests library)
 Reference: Sonauto API Refactoring Plan, Neo-Apex Architecture Documentation
 """
 
@@ -18,7 +18,7 @@ import json
 import hashlib
 import hmac
 import logging
-import asyncio
+import requests
 
 from ..agents.agent_base import GenerativeAgent, AgentRole, AgentResult
 from .fal_models import (
@@ -36,22 +36,18 @@ from .fal_models import (
 
 logger = logging.getLogger(__name__)
 
-try:
-    import fal_client
-    FAL_CLIENT_AVAILABLE = True
-except ImportError:
-    FAL_CLIENT_AVAILABLE = False
-    logger.warning("fal_client not installed. Run: pip install fal-client")
+SONAUTO_API_BASE = "https://api.sonauto.ai/v1"
+SONAUTO_API_AVAILABLE = True
 
 
 class SonautoOperator(GenerativeAgent):
     """
-    Sonauto Operator: Neo-Apex bridge to the fal.ai generative engine.
+    Sonauto Operator: Neo-Apex bridge to the Sonauto API.
     
-    Uses fal_client SDK for:
-    - Automatic authentication via FAL_KEY environment variable
-    - Async generation with subscribe_async (polling) or submit_async (webhooks)
-    - Built-in retry and error handling
+    Uses direct REST API calls for:
+    - Song generation with CFG scale control
+    - Inpainting for surgical audio fixes
+    - Track extension
     - USD cost tracking (Shadow Ledger compatible)
     
     Reference: 
@@ -59,27 +55,25 @@ class SonautoOperator(GenerativeAgent):
     - Sonauto API Design & Critique Section 4.1 "God-Mode Payload"
     """
     
-    SUPPORTED_ENV_KEYS = ['FAL_KEY', 'SONAUTO_API_KEY']
-    
     @property
     def role(self) -> AgentRole:
         return AgentRole.SONAUTO_OPERATOR
     
     def _get_api_key(self) -> Optional[str]:
-        """Get API key from environment, preferring FAL_KEY."""
-        for key_name in self.SUPPORTED_ENV_KEYS:
-            key = os.environ.get(key_name)
-            if key:
-                return key
-        return None
+        """Get Sonauto API key from environment."""
+        return os.environ.get('SONAUTO_API_KEY')
     
-    def _ensure_fal_key_set(self) -> bool:
-        """Ensure FAL_KEY is set in environment for fal_client."""
+    def _get_headers(self) -> Dict[str, str]:
+        """Get HTTP headers for Sonauto API requests."""
         api_key = self._get_api_key()
-        if api_key:
-            os.environ['FAL_KEY'] = api_key
-            return True
-        return False
+        return {
+            'Authorization': f'Bearer {api_key}' if api_key else '',
+            'Content-Type': 'application/json'
+        }
+    
+    def _has_api_key(self) -> bool:
+        """Check if Sonauto API key is configured."""
+        return bool(self._get_api_key())
     
     def _validate_input(self, state: Dict[str, Any]) -> List[str]:
         """Validate that we have necessary inputs for generation."""
@@ -113,12 +107,12 @@ class SonautoOperator(GenerativeAgent):
             return self._execute_generation(state)
     
     def _execute_generation(self, state: Dict[str, Any]) -> AgentResult:
-        """Execute a new song generation via fal_client."""
-        self.logger.info("Triggering new generation via fal.ai...")
+        """Execute a new song generation via Sonauto API."""
+        self.logger.info("Triggering new generation via Sonauto API...")
         
         try:
             request = self._build_generation_request(state)
-            payload = request.to_fal_payload()
+            payload = request.to_sonauto_payload()
             estimated_cost = request.estimate_cost()
         except Exception as e:
             self.logger.error(f"Payload validation failed: {e}")
@@ -126,16 +120,12 @@ class SonautoOperator(GenerativeAgent):
                 errors=[f"Invalid generation payload: {str(e)}"]
             )
         
-        if not self._ensure_fal_key_set():
+        if not self._has_api_key():
             self.logger.warning("No API key found, using simulated generation")
             return self._simulated_generation(state, payload, estimated_cost)
         
-        if not FAL_CLIENT_AVAILABLE:
-            self.logger.warning("fal_client not available, using simulated generation")
-            return self._simulated_generation(state, payload, estimated_cost)
-        
         try:
-            result = self._call_fal_sync(SonautoModel.TEXT_TO_MUSIC, payload)
+            result = self._call_sonauto_api(SonautoModel.TEXT_TO_MUSIC, payload)
             
             audio_url = self._extract_audio_url(result)
             audio_path = self._download_audio(audio_url, output_format='wav')
@@ -170,7 +160,7 @@ class SonautoOperator(GenerativeAgent):
         
         try:
             request = self._build_inpaint_request(state)
-            payload = request.to_fal_payload()
+            payload = request.to_sonauto_payload()
             estimated_cost = request.estimate_cost()
         except Exception as e:
             self.logger.error(f"Inpaint payload validation failed: {e}")
@@ -178,16 +168,12 @@ class SonautoOperator(GenerativeAgent):
                 errors=[f"Invalid inpaint payload: {str(e)}"]
             )
         
-        if not self._ensure_fal_key_set():
+        if not self._has_api_key():
             self.logger.warning("No API key found, using simulated inpainting")
             return self._simulated_inpainting(state, payload, estimated_cost)
         
-        if not FAL_CLIENT_AVAILABLE:
-            self.logger.warning("fal_client not available, using simulated inpainting")
-            return self._simulated_inpainting(state, payload, estimated_cost)
-        
         try:
-            result = self._call_fal_sync(SonautoModel.INPAINT, payload)
+            result = self._call_sonauto_api(SonautoModel.INPAINT, payload)
             
             audio_url = self._extract_audio_url(result)
             audio_path = self._download_audio(audio_url, output_format='wav')
@@ -217,12 +203,12 @@ class SonautoOperator(GenerativeAgent):
             )
     
     def _execute_extension(self, state: Dict[str, Any]) -> AgentResult:
-        """Execute track extension via fal_client."""
-        self.logger.info("Triggering extension via fal.ai...")
+        """Execute track extension via Sonauto API."""
+        self.logger.info("Triggering extension via Sonauto API...")
         
         try:
             request = self._build_extend_request(state)
-            payload = request.to_fal_payload()
+            payload = request.to_sonauto_payload()
             estimated_cost = request.estimate_cost()
         except Exception as e:
             self.logger.error(f"Extension payload validation failed: {e}")
@@ -230,16 +216,12 @@ class SonautoOperator(GenerativeAgent):
                 errors=[f"Invalid extension payload: {str(e)}"]
             )
         
-        if not self._ensure_fal_key_set():
+        if not self._has_api_key():
             self.logger.warning("No API key found, using simulated extension")
             return self._simulated_generation(state, payload, estimated_cost)
         
-        if not FAL_CLIENT_AVAILABLE:
-            self.logger.warning("fal_client not available, using simulated extension")
-            return self._simulated_generation(state, payload, estimated_cost)
-        
         try:
-            result = self._call_fal_sync(SonautoModel.EXTEND, payload)
+            result = self._call_sonauto_api(SonautoModel.EXTEND, payload)
             
             audio_url = self._extract_audio_url(result)
             audio_path = self._download_audio(audio_url, output_format='wav')
@@ -266,59 +248,35 @@ class SonautoOperator(GenerativeAgent):
                 errors=[f"Extension failed: {str(e)}"]
             )
     
-    def _call_fal_sync(self, model: SonautoModel, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    def _call_sonauto_api(self, model: SonautoModel, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Call fal_client synchronously using subscribe (blocking poll).
+        Call Sonauto API directly using requests library.
         
-        For production with webhooks, use _call_fal_async instead.
+        Args:
+            model: SonautoModel enum for the endpoint
+            payload: Request payload
+            
+        Returns:
+            API response as dict
         """
-        self.logger.info(f"Submitting job to {model.value} (polling mode)...")
+        endpoint = model.value
+        url = f"{SONAUTO_API_BASE}/{endpoint}"
         
-        def on_queue_update(update):
-            if hasattr(update, 'logs'):
-                for log in update.logs:
-                    self.logger.debug(f"[fal] {log.get('message', '')}")
+        self.logger.info(f"Calling Sonauto API: {endpoint}")
         
-        result = fal_client.subscribe(
-            model.value,
-            arguments=arguments,
-            with_logs=True,
-            on_queue_update=on_queue_update
+        response = requests.post(
+            url,
+            headers=self._get_headers(),
+            json=payload,
+            timeout=300
         )
         
-        return result
-    
-    async def _call_fal_async(
-        self, 
-        model: SonautoModel, 
-        arguments: Dict[str, Any],
-        webhook_url: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Call fal_client asynchronously.
+        if response.status_code != 200:
+            error_msg = f"Sonauto API error: {response.status_code} - {response.text}"
+            self.logger.error(error_msg)
+            raise Exception(error_msg)
         
-        If webhook_url is provided, uses submit_async (returns immediately).
-        Otherwise uses subscribe_async (waits for completion).
-        """
-        if webhook_url:
-            self.logger.info(f"Submitting job to {model.value} with webhook: {webhook_url}")
-            handle = await fal_client.submit_async(
-                model.value,
-                arguments=arguments,
-                webhook_url=webhook_url
-            )
-            return {
-                'status': 'queued',
-                'request_id': handle.request_id
-            }
-        else:
-            self.logger.info(f"Submitting job to {model.value} (async polling)...")
-            result = await fal_client.subscribe_async(
-                model.value,
-                arguments=arguments,
-                with_logs=True
-            )
-            return result
+        return response.json()
     
     def _build_generation_request(self, state: Dict[str, Any]) -> SonautoGenerationRequest:
         """Build validated generation request with Pydantic model."""

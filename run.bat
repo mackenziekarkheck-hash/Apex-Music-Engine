@@ -66,10 +66,10 @@ if exist ".env" (
 REM Check API keys
 echo.
 echo [Environment Check]
-if defined FAL_KEY (
-    echo   [OK] FAL_KEY configured
+if defined SONAUTO_API_KEY (
+    echo   [OK] SONAUTO_API_KEY configured
 ) else (
-    echo   [!] FAL_KEY not set - audio generation disabled
+    echo   [!] SONAUTO_API_KEY not set - audio generation disabled
 )
 
 if defined OPENAI_API_KEY (

@@ -109,10 +109,10 @@ check_env() {
         fi
     fi
     
-    if [ -n "$FAL_KEY" ]; then
-        echo -e "  ${GREEN}✓${NC} FAL_KEY configured"
+    if [ -n "$SONAUTO_API_KEY" ]; then
+        echo -e "  ${GREEN}✓${NC} SONAUTO_API_KEY configured"
     else
-        echo -e "  ${YELLOW}!${NC} FAL_KEY not set (audio generation disabled)"
+        echo -e "  ${YELLOW}!${NC} SONAUTO_API_KEY not set (audio generation disabled)"
     fi
     
     if [ -n "$OPENAI_API_KEY" ]; then
