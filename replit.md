@@ -1,14 +1,14 @@
 # APEX Engine
 
 ## Overview
-APEX Engine (Autonomous Aural Architectures) is a multi-agent framework for algorithmic rap composition using the Sonauto API via fal.ai endpoints. It uses LangGraph-style orchestration to generate, analyze, and iteratively refine rap music. The system optimizes for technical metrics (rhyme density, flow complexity), psychoacoustic responses (frisson, syncopation, groove), and commercial viability (earworm potential, quotability, trend alignment).
+APEX Engine (Autonomous Aural Architectures) is a multi-agent framework for algorithmic rap composition using the Sonauto API. It uses LangGraph-style orchestration to generate, analyze, and iteratively refine rap music. The system optimizes for technical metrics (rhyme density, flow complexity), psychoacoustic responses (frisson, syncopation, groove), and commercial viability (earworm potential, quotability, trend alignment).
 
 The project aims to create commercially viable rap tracks by leveraging advanced AI agents for lyrical composition, audio generation, and post-production, focusing on quantifiable metrics and psychoacoustic impact.
 
 ## User Preferences
 - Framework targets rap/hip-hop specifically due to genre's unique requirements
 - Designed for iterative refinement: lyrics → audio → analysis → inpainting → mastering
-- Uses Sonauto via fal.ai (latent diffusion with inpainting/extension capabilities)
+- Uses Sonauto API (latent diffusion with inpainting/extension capabilities)
 - WAV format required for accurate spectral analysis (compressed formats cause artifacts)
 
 ## System Architecture
@@ -42,7 +42,7 @@ The system includes a Flask Web UI for project management, featuring a redesigne
 - **Replit AI Integrations**: LLMClient now uses `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY` environment variables for OpenAI access without user API key (billed to Replit credits)
 
 ### Technical Implementations
--   **API Client**: Uses the official `fal_client` SDK for Fal.ai integration, supporting both synchronous polling and asynchronous webhook patterns.
+-   **API Client**: Uses direct REST API calls to Sonauto with the `requests` library.
 -   **State Management**: `RapGenerationState` (TypedDict) ensures type safety.
 -   **Error Handling**: Standardized `AgentResult` pattern for agent communication.
 -   **Budget Enforcement**: Supports USD cost tracking and budget limits.
@@ -50,13 +50,13 @@ The system includes a Flask Web UI for project management, featuring a redesigne
 
 ## External Dependencies
 
--   **Fal.ai Sonauto API**: Primary audio generation service.
-    -   **Endpoints**: `/text-to-music`, `/inpaint`, `/extend`.
-    -   **Authentication**: `Key <FAL_KEY>` header.
+-   **Sonauto API**: Primary audio generation service.
+    -   **Endpoints**: `/songs`, `/songs/inpaint`, `/songs/extend`.
+    -   **Authentication**: `Bearer <SONAUTO_API_KEY>` header.
     -   **Key Parameters**: `prompt_strength` (CFG scale), `balance_strength`, `output_format` (WAV for analysis).
     -   **Cost Model**: $0.075 per generation, inpainting, or extension.
 -   **OpenAI API**: Used for LLM-based lyric generation and iteration (e.g., GPT-4o via `LLMClient`).
--   **`fal_client` SDK**: Official Python client for Fal.ai.
+-   **`requests`**: HTTP client for Sonauto API calls.
 -   **`librosa`**: For audio DSP, beat tracking, and spectral analysis.
 -   **`numpy`**: Numerical operations.
 -   **`soundfile`**: Audio file I/O.

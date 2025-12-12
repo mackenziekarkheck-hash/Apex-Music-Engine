@@ -244,7 +244,7 @@ Fal.ai provides the Sonauto API for AI-powered music generation.
 
 #### Getting Your API Key
 
-1. Go to [fal.ai](https://fal.ai)
+1. Go to [sonauto.ai](https://sonauto.ai)
 2. Sign up for an account
 3. Go to **Dashboard** → **API Keys**
 4. Create a new key and copy it
@@ -253,7 +253,7 @@ Fal.ai provides the Sonauto API for AI-powered music generation.
 
 Edit your `.env` file:
 ```
-FAL_KEY=your_fal_api_key_here
+SONAUTO_API_KEY=your_sonauto_api_key_here
 ```
 
 #### Pricing
@@ -311,7 +311,7 @@ Create a `.env` file in the project root with these options:
 
 ```bash
 # Required for full functionality
-FAL_KEY=your_fal_api_key
+SONAUTO_API_KEY=your_sonauto_api_key
 OPENAI_API_KEY=your_openai_api_key
 
 # Optional configuration

@@ -2,7 +2,7 @@
 
 **Autonomous Aural Architectures for Algorithmic Rap Composition**
 
-APEX Engine is a multi-agent AI framework that generates, analyzes, and iteratively refines rap music using advanced algorithmic techniques and the Sonauto API via fal.ai.
+APEX Engine is a multi-agent AI framework that generates, analyzes, and iteratively refines rap music using advanced algorithmic techniques and the Sonauto API.
 
 ## Quick Start
 
@@ -11,7 +11,7 @@ APEX Engine is a multi-agent AI framework that generates, analyzes, and iterativ
 - **Python 3.11+** - [Download Python](https://python.org/downloads)
 - **API Keys** (optional, for full functionality):
   - [OpenAI API Key](https://platform.openai.com/api-keys) - For GPT-4o lyric generation
-  - [Fal.ai API Key](https://fal.ai/dashboard/keys) - For Sonauto audio generation
+  - [Sonauto API Key](https://sonauto.ai/) - For Sonauto audio generation
 
 ### Installation
 
