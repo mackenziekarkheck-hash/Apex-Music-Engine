@@ -1013,33 +1013,55 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
                     document.getElementById('payload-content').textContent = 
                         JSON.stringify(data.api_payload, null, 2);
                     document.getElementById('payload-preview').style.display = 'block';
+                    addConsoleLine('success', 'Payload preview generated. Estimated cost: $0.075');
+                } else {
+                    addConsoleLine('error', 'Preview failed: ' + (data.error || 'Unknown error'));
                 }
             } catch (e) {
-                alert('Request failed: ' + e.message);
+                addConsoleLine('error', 'Preview request failed: ' + e.message);
             }
         }
         
         async function approveLyrics() {
-            if (!confirm('Approve these lyrics for audio generation?')) return;
+            const promptText = document.getElementById('prompt-text').value;
+            const lyricsText = document.getElementById('lyrics-text').value;
+            const neuroEffects = document.getElementById('neuro-effects').value;
+            const neurochemicalEffects = document.getElementById('neurochemical-effects').value;
+            const musicalEffects = document.getElementById('musical-effects').value;
             
-            showLoading('Approving lyrics...');
+            if (!promptText.trim() && !lyricsText.trim()) {
+                addConsoleLine('error', 'Please enter at least a prompt/description or lyrics before approving.');
+                return;
+            }
+            
+            if (!confirm('Approve this configuration for audio generation?')) return;
+            
+            showLoading('Approving configuration...');
+            addConsoleLine('info', 'Approving seed composition for generation...');
             
             try {
                 const response = await fetch(`/api/project/${projectId}/approve`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({})
+                    body: JSON.stringify({
+                        prompt_text: promptText,
+                        lyrics_text: lyricsText,
+                        neuro_effects: neuroEffects,
+                        neurochemical_effects: neurochemicalEffects,
+                        musical_effects: musicalEffects
+                    })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
+                    addConsoleLine('success', 'Configuration approved! Ready for audio generation.');
                     location.reload();
                 } else {
-                    alert('Error: ' + data.error);
+                    addConsoleLine('error', 'Approval failed: ' + data.error);
                 }
             } catch (e) {
-                alert('Request failed: ' + e.message);
+                addConsoleLine('error', 'Request failed: ' + e.message);
             } finally {
                 hideLoading();
             }
@@ -1049,6 +1071,7 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
             if (!confirm('Generate audio? This will use API credits ($0.075).')) return;
             
             showLoading('Generating audio with Sonauto...');
+            addConsoleLine('info', 'Initiating audio generation with Sonauto API...');
             
             try {
                 const response = await fetch(`/api/project/${projectId}/generate-audio`, {
@@ -1059,12 +1082,12 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
                 const data = await response.json();
                 
                 if (data.success) {
-                    alert('Audio generation initiated! ' + data.message);
+                    addConsoleLine('success', 'Audio generation initiated! ' + data.message);
                 } else {
-                    alert('Error: ' + data.error);
+                    addConsoleLine('error', 'Generation failed: ' + data.error);
                 }
             } catch (e) {
-                alert('Request failed: ' + e.message);
+                addConsoleLine('error', 'Generation request failed: ' + e.message);
             } finally {
                 hideLoading();
             }

@@ -479,8 +479,13 @@ input[type="range"] {
     padding: 15px;
     border-radius: 4px;
     overflow-x: auto;
+    overflow-y: auto;
     font-size: 0.85rem;
-    max-height: 300px;
+    max-height: 400px;
+    max-width: 100%;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    word-break: break-word;
 }
 
 .cost-estimate {

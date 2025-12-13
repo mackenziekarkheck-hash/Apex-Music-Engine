@@ -217,6 +217,50 @@ class ProjectManager:
         
         logger.info(f"Approved v{version} for project {project_id}")
     
+    def approve_seed_composition(
+        self,
+        project_id: str,
+        api_payload: Dict[str, Any],
+        prompt_text: str = '',
+        lyrics_text: str = '',
+        neuro_effects: str = '',
+        neurochemical_effects: str = '',
+        musical_effects: str = ''
+    ) -> None:
+        """Approve seed composition directly (without requiring iteration)."""
+        project_path = self.base_dir / project_id
+        approved_dir = project_path / "approved"
+        approved_dir.mkdir(parents=True, exist_ok=True)
+        
+        if lyrics_text:
+            (approved_dir / "final_lyrics.txt").write_text(lyrics_text)
+        
+        self._save_json(approved_dir / "api_payload.json", {
+            "approved_at": datetime.now().isoformat(),
+            "from_version": "direct",
+            "payload": api_payload
+        })
+        
+        self._save_json(approved_dir / "seed_composition.json", {
+            "prompt_text": prompt_text,
+            "lyrics_text": lyrics_text,
+            "neuro_effects": neuro_effects,
+            "neurochemical_effects": neurochemical_effects,
+            "musical_effects": musical_effects
+        })
+        
+        config = self._load_json(project_path / "config.json")
+        config["status"] = "approved"
+        config["prompt_text"] = prompt_text
+        config["lyrics_text"] = lyrics_text
+        config["neuro_effects"] = neuro_effects
+        config["neurochemical_effects"] = neurochemical_effects
+        config["musical_effects"] = musical_effects
+        config["updated_at"] = datetime.now().isoformat()
+        self._save_json(project_path / "config.json", config)
+        
+        logger.info(f"Approved seed composition for project {project_id}")
+    
     def save_output(
         self,
         project_id: str,

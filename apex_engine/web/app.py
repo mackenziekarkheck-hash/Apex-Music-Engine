@@ -252,30 +252,31 @@ def api_score_lyrics(project_id):
 
 @app.route('/api/project/<project_id>/approve', methods=['POST'])
 def api_approve_lyrics(project_id):
-    """API: Approve lyrics and preview API payload."""
+    """API: Approve seed composition for audio generation.
+    
+    Can approve either:
+    1. From form fields (prompt_text, lyrics_text, etc) directly
+    2. From an existing iteration version
+    """
     try:
         project = project_manager.load_project(project_id)
         data = request.json or {}
         
-        version = data.get('version')
-        if not version and project.get('iterations'):
-            version = project['iterations'][-1]['version']
-        
-        if not version:
-            return jsonify({'error': 'No iteration to approve'}), 400
-        
-        iteration = next(
-            (i for i in project.get('iterations', []) if i['version'] == version),
-            None
-        )
-        if not iteration:
-            return jsonify({'error': f'Iteration v{version} not found'}), 404
-        
         prompt_text = data.get('prompt_text', '') or project.get('prompt_text', '')
-        lyrics_text = iteration.get('lyrics', '') or project.get('lyrics_text', '')
+        lyrics_text = data.get('lyrics_text', '') or project.get('lyrics_text', '')
         neuro_effects = data.get('neuro_effects', '') or project.get('neuro_effects', '')
         neurochemical_effects = data.get('neurochemical_effects', '') or project.get('neurochemical_effects', '')
         musical_effects = data.get('musical_effects', '') or project.get('musical_effects', '')
+        
+        version = data.get('version')
+        if not version and project.get('iterations'):
+            version = project['iterations'][-1]['version']
+            iteration = project['iterations'][-1]
+            if not lyrics_text:
+                lyrics_text = iteration.get('lyrics', '')
+        
+        if not prompt_text.strip() and not lyrics_text.strip():
+            return jsonify({'error': 'Please provide at least a prompt/description or lyrics'}), 400
         
         api_payload = build_api_payload(
             project=project,
@@ -286,20 +287,24 @@ def api_approve_lyrics(project_id):
             musical_effects=musical_effects
         )
         
-        project_manager.approve_iteration(
+        project_manager.approve_seed_composition(
             project_id=project_id,
-            version=version,
-            api_payload=api_payload
+            api_payload=api_payload,
+            prompt_text=prompt_text,
+            lyrics_text=lyrics_text,
+            neuro_effects=neuro_effects,
+            neurochemical_effects=neurochemical_effects,
+            musical_effects=musical_effects
         )
         
         return jsonify({
             'success': True,
-            'version': version,
+            'version': version or 'direct',
             'api_payload': api_payload
         })
         
     except Exception as e:
-        logger.error(f"Approve lyrics failed: {e}")
+        logger.error(f"Approve failed: {e}")
         return jsonify({'error': str(e)}), 500
 
 
