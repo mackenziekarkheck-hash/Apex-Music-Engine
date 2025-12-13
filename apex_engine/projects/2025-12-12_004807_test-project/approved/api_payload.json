@@ -1,0 +1,19 @@
+{
+  "approved_at": "2025-12-13T22:02:28.512742",
+  "from_version": "direct",
+  "payload": {
+    "prompt": "A high-fidelity Cyberpunk Phonk track with an aggressive atmosphere. The instrumentation features heavy distorted 808 basslines, cowbell melodies, and rapid-fire hi-hat triplets. The vocal delivery utilizes a Memphis rap flow with chopped and screwed effects. The production features wide stereo imaging, industrial textures, and a nocturnal, dystopian vibe.. Mood/Vibe: Triggers: Dynamic Surge & Expectation Violation.\n\nStructure:\n\nIntro: Low-vol industrial texture. Build tension via high-freq filter sweep (Spectral Brightness).\n\nPre-Drop: 1-bar total silence to spike anticipation.\n\nThe Drop: EXPLOSIVE entry on \"Drift through...\" Max RMS surge. Hyper-stable 808s.\n\nBridge: \"Chopped & Screwed\" FX slows tempo suddenly (Prediction Error).\n\nResolution: Snap back to full speed on Verse 2.\n\nPrompt Add: \"Start low, silence gap, explosive drop, chopped bridge.\". Intended Effect: Target: Syncopation Index of 15-25 (Goldilocks Zone).\n\nImplementation:\n\nHi-Hats: Use rolling triplets with velocity variation to induce rhythmic prediction error.\n\nMicro-timing: Apply \"Dilla swing\" to snares, delaying them slightly behind the grid for human feel.\n\nBass: 808 slides must \"chase\" the kick to create interplay.\n\nEarworm: The hook uses call-and-response patterns with slight melodic twists to maximize engagement.. Production Style: Balance Strength: 0.65 (Phonk aesthetic; vocals blend with heavy beat). Prompt Strength: 3.0 (High adherence for industrial artifacts). Tag Order: Phonk, Cyberpunk, Dark, Aggressive, 2020s, High Fidelity, Distorted 808.",
+    "tags": [
+      "trap",
+      "hip hop",
+      "rap"
+    ],
+    "lyrics": "[INTRO] (Industrial noise, distant siren, heavy vinyl crackle) Yeah... System offline. (Offline) Night shade. (Shade) Watch the grid collapse.\n\n[HOOK] (Heavy distorted 808s kick in here with Cowbell melody) Drift through the smoke, chrome on the dash City in ruins, we turning to ash (Ash, ash) Eyes wide shut, pedal to the floor Demon in the engine screaming out for more Slide. (Slide) Slide. (Slide) Ghost in the shell, nowhere to hide.\n\n[VERSE 1 - Rapid-Fire Triplet Flow] Riding through the city with no pity in my soul Lost inside the static, losing all control (Control) Circuit board breaker, the undertaker Meeting my maker inside of the vapor 808 bumping, the pulse is jumping Venom in the veins and the heart is pumping Switch lanes. (Skrrt) Mind games. (Aye) Walking through the fire but I never feel the flames.\n\n[BRIDGE - Chopped & Screwed Section] (Tempo feels like it slows down, pitch drops low) N-N-Night calls... night... night calls... System f-f-fail... failure... Walking... walking through the... (Deep voice) NEON GRAVE.\n\n[VERSE 2 - Aggressive / Memphis Flow] Back on the attack, fade to black Got the devil on my shoulder and he talking smack Cowbell ringing like a death knell toll Paid the price, yeah I sold my soul High-tech, low-life, sharp as a knife Running from the shadows all of my life (What? What?) Double cup spill, time to kill Popping on the grid just for the thrill.\n\n[HOOK] Drift through the smoke, chrome on the dash City in ruins, we turning to ash (Ash, ash) Eyes wide shut, pedal to the floor Demon in the engine screaming out for more Slide. (Slide) Slide. (Slide) Ghost in the shell, nowhere to hide.\n\n[OUTRO] (Vocals heavily distorted and fading into reverb) Nowhere to hide... (Hide...) Disconnect. (Click)",
+    "bpm": 140,
+    "prompt_strength": 2.0,
+    "balance_strength": 0.7,
+    "output_format": "wav",
+    "instrumental": false,
+    "num_songs": 1
+  }
+}
