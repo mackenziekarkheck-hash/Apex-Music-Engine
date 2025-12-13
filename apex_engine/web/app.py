@@ -271,7 +271,20 @@ def api_approve_lyrics(project_id):
         if not iteration:
             return jsonify({'error': f'Iteration v{version} not found'}), 404
         
-        api_payload = build_api_payload(project, iteration['lyrics'])
+        prompt_text = data.get('prompt_text', '') or project.get('prompt_text', '')
+        lyrics_text = iteration.get('lyrics', '') or project.get('lyrics_text', '')
+        neuro_effects = data.get('neuro_effects', '') or project.get('neuro_effects', '')
+        neurochemical_effects = data.get('neurochemical_effects', '') or project.get('neurochemical_effects', '')
+        musical_effects = data.get('musical_effects', '') or project.get('musical_effects', '')
+        
+        api_payload = build_api_payload(
+            project=project,
+            prompt_text=prompt_text,
+            lyrics_text=lyrics_text,
+            neuro_effects=neuro_effects,
+            neurochemical_effects=neurochemical_effects,
+            musical_effects=musical_effects
+        )
         
         project_manager.approve_iteration(
             project_id=project_id,
@@ -297,11 +310,23 @@ def api_preview_payload(project_id):
         project = project_manager.load_project(project_id)
         data = request.json or {}
         
-        lyrics = data.get('lyrics', '')
-        if not lyrics and project.get('iterations'):
-            lyrics = project['iterations'][-1].get('lyrics', '')
+        prompt_text = data.get('prompt_text', '') or project.get('prompt_text', '')
+        lyrics_text = data.get('lyrics_text', '') or project.get('lyrics_text', '')
+        neuro_effects = data.get('neuro_effects', '') or project.get('neuro_effects', '')
+        neurochemical_effects = data.get('neurochemical_effects', '') or project.get('neurochemical_effects', '')
+        musical_effects = data.get('musical_effects', '') or project.get('musical_effects', '')
         
-        api_payload = build_api_payload(project, lyrics)
+        if not lyrics_text and project.get('iterations'):
+            lyrics_text = project['iterations'][-1].get('lyrics', '')
+        
+        api_payload = build_api_payload(
+            project=project,
+            prompt_text=prompt_text,
+            lyrics_text=lyrics_text,
+            neuro_effects=neuro_effects,
+            neurochemical_effects=neurochemical_effects,
+            musical_effects=musical_effects
+        )
         
         return jsonify({
             'success': True,
@@ -898,32 +923,55 @@ def generate_detailed_console_output(lyrics: str, project: dict) -> dict:
     }
 
 
-def build_api_payload(project: dict, lyrics: str) -> dict:
-    """Build the Sonauto API payload for review."""
+def build_api_payload(
+    project: dict,
+    prompt_text: str = '',
+    lyrics_text: str = '',
+    neuro_effects: str = '',
+    neurochemical_effects: str = '',
+    musical_effects: str = ''
+) -> dict:
+    """Build the Sonauto API payload from all 5 seed composition fields.
+    
+    Compiles:
+    - prompt_text (Description) + neuro_effects + neurochemical_effects + musical_effects -> prompt
+    - lyrics_text -> lyrics
+    """
     genre = project.get('genre', 'trap')
     mood = project.get('mood', 'aggressive')
     tags = project.get('tags', [genre, 'hip hop', 'rap'])
     
-    prompt = f"High-fidelity, studio-quality {genre} track. {mood.title()} energy with professional mixing."
+    compiled_prompt_parts = []
     
-    if genre == 'phonk':
-        prompt += " Heavy distorted 808s, cowbell melodies, Memphis rap influence."
-    elif genre == 'drill':
-        prompt += " Dark atmosphere, sliding 808s, aggressive delivery."
-    elif genre == 'boom bap' or genre == 'boom_bap':
-        prompt += " Classic hip hop production, sample-based, vinyl warmth."
-    elif genre == 'trap':
-        prompt += " Hard-hitting 808s, hi-hat rolls, modern trap production."
+    if prompt_text.strip():
+        compiled_prompt_parts.append(prompt_text.strip())
+    else:
+        compiled_prompt_parts.append(f"High-fidelity, studio-quality {genre} track. {mood.title()} energy with professional mixing.")
+    
+    if neuro_effects.strip():
+        compiled_prompt_parts.append(f"Mood/Vibe: {neuro_effects.strip()}")
+    
+    if neurochemical_effects.strip():
+        compiled_prompt_parts.append(f"Intended Effect: {neurochemical_effects.strip()}")
+    
+    if musical_effects.strip():
+        compiled_prompt_parts.append(f"Production Style: {musical_effects.strip()}")
+    
+    compiled_prompt = ". ".join(compiled_prompt_parts)
+    if not compiled_prompt.endswith('.'):
+        compiled_prompt += '.'
+    
+    is_instrumental = len(lyrics_text.strip()) == 0
     
     return {
-        'prompt': prompt,
+        'prompt': compiled_prompt,
         'tags': tags,
-        'lyrics': lyrics,
+        'lyrics': lyrics_text.strip(),
         'bpm': project.get('bpm', 140),
         'prompt_strength': project.get('prompt_strength', 2.0),
         'balance_strength': project.get('balance_strength', 0.7),
         'output_format': 'wav',
-        'instrumental': False,
+        'instrumental': is_instrumental,
         'num_songs': 1
     }
 

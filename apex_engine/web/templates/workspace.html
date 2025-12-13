@@ -988,13 +988,23 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
         }
         
         async function previewPayload() {
-            const lyrics = document.getElementById('lyrics-editor').value;
+            const promptText = document.getElementById('prompt-text').value;
+            const lyricsText = document.getElementById('lyrics-text').value;
+            const neuroEffects = document.getElementById('neuro-effects').value;
+            const neurochemicalEffects = document.getElementById('neurochemical-effects').value;
+            const musicalEffects = document.getElementById('musical-effects').value;
             
             try {
                 const response = await fetch(`/api/project/${projectId}/preview-payload`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({lyrics: lyrics})
+                    body: JSON.stringify({
+                        prompt_text: promptText,
+                        lyrics_text: lyricsText,
+                        neuro_effects: neuroEffects,
+                        neurochemical_effects: neurochemicalEffects,
+                        musical_effects: musicalEffects
+                    })
                 });
                 
                 const data = await response.json();
