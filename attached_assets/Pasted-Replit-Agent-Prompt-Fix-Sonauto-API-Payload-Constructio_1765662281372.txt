@@ -1,0 +1,65 @@
+Replit Agent Prompt: Fix Sonauto API Payload Construction & Data Binding
+Objective: Refactor the API payload construction logic to ensure all 5 user-defined form sections are correctly captured, compiled, and mapped to the Sonauto API request. Currently, the system fails to capture user input (reverting to hardcoded defaults) and ignores critical descriptive sections.
+
+Current State Analysis:
+
+Missing Data: The API payload currently sends empty strings for lyrics and default hardcoded text for prompt, ignoring user input.
+
+Ignored Fields: The application collects 5 distinct sections ((1) Prompt/Description, (2) Lyrics, (3) Neuropsychological Effects, (4) Neurochemical Targets, (5) Musical Effects), but only a generic prompt is being sent.
+
+Broken Preview: The "Preview API Payload" feature displays incorrect/static data, confirming that the state is not updating or mapping correctly before transmission.
+
+Required Implementation Plan:
+
+Step 1: Audit Frontend State & Data Binding
+
+Task: Analyze the form component responsible for the 5 input sections.
+
+Action: Verify that each text area (Description, Lyrics, Neuro Effects, Neuro Targets, Musical Effects) is correctly bound to a state variable (e.g., useState or a form object).
+
+Fix: Ensure onChange handlers are actually updating the state. If the form uses a "Submit" or "Preview" button, trace the data flow to ensure the current state is passed, not the initial state.
+
+Step 2: Debug "Default Value" Override
+
+Task: Locate the logic where the API payload is assembled (likely in a generateSong function or a backend route handler).
+
+Action: Identify why user input is being ignored. Look for logic resembling const prompt = userPrompt || "Default Trap Track".
+
+Fix: Ensure that the user's input is treated as the source of truth. If the user input is an empty string, only then should it fallback (or validation should prevent submission).
+
+Step 3: Implement Advanced Prompt Construction Logic
+
+Task: The Sonauto API likely does not have specific fields for "Neurochemical Targets." We must compile these custom fields into the single prompt string supported by the API.
+
+Action: Rewrite the payload builder to concatenate the fields dynamically.
+
+Logic:
+
+JavaScript
+
+// Conceptual Logic
+let compiledPrompt = `${userDescription}. `;
+if (neuropsychologicalEffects) compiledPrompt += ` Mood/Vibe: ${neuropsychologicalEffects}. `;
+if (neurochemicalTargets) compiledPrompt += ` Intended Effect: ${neurochemicalTargets}. `;
+if (musicalEffects) compiledPrompt += ` Production Style: ${musicalEffects}.`;
+
+// Final Payload Construction
+const payload = {
+    prompt: compiledPrompt, // The aggregated string
+    lyrics: userLyrics,     // Direct mapping
+    instrumental: userLyrics.length === 0, // Auto-toggle if lyrics exist
+    // ... other settings (BPM, etc)
+};
+Step 4: Fix the "Preview Payload" Component
+
+Task: Ensure the UI feature that shows the JSON preview reflects the exact transformation logic defined in Step 3.
+
+Action: The preview should not just dump the form state; it should run the compiledPrompt logic so the user sees exactly what the AI will see.
+
+Step 5: Verification & Logging
+
+Task: Add server-side or console logging immediately before the external API fetch call.
+
+Action: Log the final payload object. Verify that lyrics is populated and prompt contains the concatenated details from all 5 sections.
+
+Deliverable: Write the specific code changes required to (1) bind the form inputs correctly, (2) concatenate the 5 sections into a rich prompt string, and (3) update the API call to send this dynamic data instead of defaults.
