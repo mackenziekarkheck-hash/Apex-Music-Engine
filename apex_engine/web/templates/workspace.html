@@ -1379,8 +1379,8 @@ Your lyrics here...">{{ project.lyrics_text or '' }}</textarea>
                 const data = await response.json();
                 
                 if (data.success) {
-                    if (data.optimized_value) {
-                        textarea.value = data.optimized_value;
+                    if (data.optimized || data.optimized_value) {
+                        textarea.value = data.optimized || data.optimized_value;
                         textarea.dispatchEvent(new Event('input'));
                     }
                     

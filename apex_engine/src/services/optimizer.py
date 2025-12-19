@@ -101,7 +101,7 @@ class FieldOptimizer:
         if self.simulation_mode:
             logger.warning("No OPENAI_API_KEY found. FieldOptimizer in simulation mode.")
     
-    def optimize_field(self, field_name: str, text: str, context: Optional[str] = None) -> Dict[str, Any]:
+    def optimize_field(self, field_name: str, text: str, context: Optional[str] = None, analysis_context: Optional[Dict] = None) -> Dict[str, Any]:
         """
         Optimize a specific field using GPT-4o.
         
@@ -109,6 +109,7 @@ class FieldOptimizer:
             field_name: Name of the field to optimize
             text: Current field text
             context: Optional additional context
+            analysis_context: Optional dict with console_logs and metrics from frontend
             
         Returns:
             Dict with optimized text and metadata.
@@ -118,7 +119,8 @@ class FieldOptimizer:
                 "success": False,
                 "error": "No text provided to optimize",
                 "original": text,
-                "optimized": text
+                "optimized": text,
+                "optimized_value": text
             }
         
         if self.simulation_mode:
@@ -156,8 +158,10 @@ class FieldOptimizer:
                 "success": True,
                 "original": text,
                 "optimized": optimized,
+                "optimized_value": optimized,
                 "field": field_name,
-                "model": self.model
+                "model": self.model,
+                "reasoning": "Optimized using GPT-4o with Fal.ai context"
             }
             
         except Exception as e:
@@ -166,7 +170,8 @@ class FieldOptimizer:
                 "success": False,
                 "error": str(e),
                 "original": text,
-                "optimized": text
+                "optimized": text,
+                "optimized_value": text
             }
     
     def _load_context_file(self, field_name: str) -> Optional[str]:
@@ -231,8 +236,10 @@ class FieldOptimizer:
             "success": True,
             "original": text,
             "optimized": optimized,
+            "optimized_value": optimized,
             "field": field_name,
-            "model": "simulation"
+            "model": "simulation",
+            "reasoning": "Simulated optimization (no OpenAI API key configured)"
         }
 
 

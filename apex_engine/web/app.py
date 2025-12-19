@@ -383,7 +383,12 @@ def api_generate_audio(project_id):
     try:
         project = project_manager.load_project(project_id)
         
-        if project.get('status') != 'approved':
+        is_approved = (
+            project.get('status') == 'approved' or
+            project.get('state', {}).get('approval', {}).get('lyrics', {}).get('approved', False)
+        )
+        
+        if not is_approved:
             return jsonify({
                 'error': 'Lyrics must be approved before generating audio. Use the Approve button first.'
             }), 400

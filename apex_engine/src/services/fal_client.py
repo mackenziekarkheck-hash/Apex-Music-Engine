@@ -56,6 +56,8 @@ class FalMusicClient:
     
     def _get_headers(self) -> Dict[str, str]:
         """Get request headers with authentication."""
+        if not self.api_key:
+            raise ValueError("FAL_KEY not configured. Cannot make API calls.")
         return {
             "Authorization": f"Key {self.api_key}",
             "Content-Type": "application/json"
@@ -71,7 +73,7 @@ class FalMusicClient:
         Returns:
             FalGenerationResult with request_id for polling.
         """
-        if self.simulation_mode:
+        if self.simulation_mode or not self.api_key:
             return self._simulate_submit(payload)
         
         url = self.base_url
