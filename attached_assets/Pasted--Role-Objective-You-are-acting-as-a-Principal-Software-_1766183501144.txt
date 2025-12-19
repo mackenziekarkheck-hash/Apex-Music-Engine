@@ -1,0 +1,50 @@
+# Role & Objective
+You are acting as a Principal Software Engineer documenting a legacy codebase for a new team. Your goal is to expose every hidden detail, data structure, and logic flow to prevent operational errors.
+
+# Instructions
+Strictly audit the current codebase and generate the following three files. Do not summarize; be exhaustive.
+
+## Task 1: Generate `FEATURES_AND_LIMITATIONS.md`
+1. **Section A: Features**
+   - List every distinct feature.
+   - **Constraint:** You must cite the specific file and function name that implements the feature (e.g., "Proxy Rotation -> `proxy_manager.py`: `rotate_ip()`").
+2. **Section B: Database & Schema Audit**
+   - Scan for SQL queries (`CREATE`, `INSERT`, `SELECT`), ORM models, or Key-Value usage.
+   - Document the **Data Schema**: Table names, columns, and relationships if visible.
+   - If no DB is found, explicitly state: "In-Memory or File-Based Storage only."
+3. **Section C: Operational Risks**
+   - Tag features involving:
+     - **Financial Risk:** (API usage, auto-checkout).
+     - **Ban Risk:** (Scraping, automation, high-frequency requests).
+     - **Data Loss:** (File deletion, overwriting).
+     - **PII:** (Handling names, addresses, credit cards).
+4. **Section D: Code Health & Debt**
+   - Grep for `TODO`, `FIXME`, `BUG`, `HACK`. List every instance with its file location.
+   - **Test Availability:** Check for `tests/` folder or `test_*.py` files. State clearly: "Test Suite Present: [Yes/No]. Run via: [Command]."
+
+## Task 2: Generate `ARCHITECTURE.md`
+1. **Part A: File Tree**
+   - Generate a text-based directory structure of the project.
+2. **Part B: Detailed Component Analysis**
+   - **For Small Files (<200 lines):** State Purpose, Dependencies, and Dependents.
+   - **For Monoliths (>200 lines):** DO NOT summarize the whole file. BREAK IT DOWN. List the **Top 5 Key Functions/Classes** within the file and explain their specific roles.
+3. **Part C: Dependency Graph**
+   - **System Binaries:** Scan imports to infer non-Python needs (e.g., `selenium` -> Requires ChromeDriver; `ffmpeg` -> Requires FFMPEG binary).
+   - **Python Packages:** List packages with versions inferred from `requirements.txt`.
+4. **Part D: Global Constants (Tunables)**
+   - Scan for capitalized global variables (e.g., `TIMEOUT = 30`, `MAX_THREADS = 5`). List them here so developers know what settings they can tweak.
+
+## Task 3: Generate `DATAFLOW.md`
+1. **Step 1: Quick Start**
+   - Provide the exact command(s) to install dependencies and run the application locally.
+2. **Step 2: Environment Variable Cheat Sheet**
+   - Create a table of ALL environment variables found (`os.getenv`, `os.environ`).
+   - Columns: `Variable Name` | `Default Value` | `Purpose`.
+3. **Step 3: Input/Output Schemas**
+   - **Inputs:** Provide **Raw Text Examples** of every expected input file (e.g., `.json`, `proxies.txt`, `.csv`). Show the required format.
+   - **Outputs:** List every file created by the script. State if the script *Appends* to it or *Overwrites* it.
+4. **Step 4: Mermaid Flowchart (Logic & State)**
+   - Generate a Mermaid.js chart representing the Local Run.
+   - **Logic:** `Start` -> `Validation` -> `Processing` -> `Output`.
+   - **Resilience (Critical):** Visually depict **Retry Loops** (arrows returning to previous states) and **Error Handlers**.
+   - **State:** Show interactions with the Database/Storage (e.g., "Read from DB" -> "Process" -> "Write to CSV").
