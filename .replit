@@ -1,10 +1,10 @@
-modules = ["python-3.11"]
+modules = ["web", "bash", "python-3.12"]
 [agent]
 expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["ffmpeg-full", "libsndfile", "libxcrypt"]
+packages = ["borgbackup", "cacert", "ffmpeg-full", "glibcLocales", "gnutar", "libcxx", "libffi", "libsndfile", "libxcrypt", "llvm", "pkg-config", "xsimd"]
 
 [workflows]
 runButton = "Project"
