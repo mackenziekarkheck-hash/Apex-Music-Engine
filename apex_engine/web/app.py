@@ -9,7 +9,8 @@ Routes:
 - /api/iterate: Lyric iteration with scoring
 - /api/score: Score lyrics using agents
 - /api/approve: Approve lyrics for generation
-- /api/generate-audio: Trigger Sonauto generation
+- /api/generate-audio: Trigger Fal.ai MiniMax Music v2 generation
+- /api/optimize-field: Optimize individual fields with AI
 """
 
 import os
@@ -30,6 +31,10 @@ from apex_engine.src.agents.lyrical.agent_flow import FlowAnalyzer
 from apex_engine.src.agents.lyrical.agent_vowel import VowelAnalyzer
 from apex_engine.src.agents.cultural.agent_meme import MemeAnalyzer
 from apex_engine.src.core.predictor import ViralityPredictor
+from apex_engine.src.services.fal_client import FalMusicClient, build_fal_payload
+from apex_engine.src.services.payload_factory import PayloadFactory
+from apex_engine.src.services.validators import validate_full_payload, validate_and_fix_lyrics
+from apex_engine.src.services.optimizer import FieldOptimizer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -47,6 +52,9 @@ flow_analyzer = FlowAnalyzer()
 vowel_analyzer = VowelAnalyzer()
 meme_analyzer = MemeAnalyzer()
 virality_predictor = ViralityPredictor()
+fal_client = FalMusicClient()
+payload_factory = PayloadFactory()
+field_optimizer = FieldOptimizer()
 
 
 @app.route('/')
@@ -371,7 +379,7 @@ def api_optimize_seed():
 
 @app.route('/api/project/<project_id>/generate-audio', methods=['POST'])
 def api_generate_audio(project_id):
-    """API: Generate audio using Sonauto (requires explicit approval)."""
+    """API: Generate audio using Fal.ai MiniMax Music v2 (requires explicit approval)."""
     try:
         project = project_manager.load_project(project_id)
         
@@ -380,16 +388,42 @@ def api_generate_audio(project_id):
                 'error': 'Lyrics must be approved before generating audio. Use the Approve button first.'
             }), 400
         
-        approved_payload = project.get('approved_payload', {}).get('payload', {})
-        if not approved_payload:
-            return jsonify({'error': 'No approved payload found'}), 400
+        ui_data = {
+            'description': project.get('prompt_text', ''),
+            'lyrics': project.get('lyrics_text', ''),
+            'neuro_effects': project.get('neuro_effects', ''),
+            'neurochemical_targets': project.get('neurochemical_effects', ''),
+            'musical_effects': project.get('musical_effects', ''),
+            'seed_composition': project.get('seed_composition', '')
+        }
         
-        return jsonify({
-            'success': True,
-            'message': 'Audio generation would be triggered here',
-            'payload': approved_payload,
-            'note': 'Full Sonauto integration pending - this shows the approved payload'
-        })
+        fal_payload = payload_factory.construct_payload(ui_data)
+        
+        prompt = fal_payload.get('input', {}).get('prompt', '')
+        lyrics = fal_payload.get('input', {}).get('lyrics_prompt', '')
+        validated_prompt, validated_lyrics, issues = validate_full_payload(prompt, lyrics)
+        
+        fal_payload['input']['prompt'] = validated_prompt
+        fal_payload['input']['lyrics_prompt'] = validated_lyrics
+        
+        result = fal_client.generate_music(fal_payload)
+        
+        if result.status == 'COMPLETED':
+            return jsonify({
+                'success': True,
+                'request_id': result.request_id,
+                'audio_url': result.audio_url,
+                'duration': result.duration,
+                'validation_issues': issues,
+                'payload_used': fal_payload
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.error or 'Generation failed',
+                'status': result.status,
+                'validation_issues': issues
+            }), 500
         
     except Exception as e:
         logger.error(f"Generate audio failed: {e}")
@@ -536,46 +570,33 @@ def api_field_context(field_name):
 
 @app.route('/api/optimize-field', methods=['POST'])
 def api_optimize_field():
-    """API: Optimize a specific form field using GPT with agent analysis context."""
+    """API: Optimize a specific form field using GPT-4o with Fal.ai context."""
     try:
         data = request.json
         project_id = data.get('project_id')
         field_name = data.get('field_name')
         current_value = data.get('current_value', '')
-        console_logs = data.get('console_logs', [])
-        metrics = data.get('metrics', {})
         
-        if not project_id or not field_name:
-            return jsonify({'error': 'project_id and field_name are required'}), 400
+        if not field_name:
+            return jsonify({'error': 'field_name is required'}), 400
         
-        project = project_manager.load_project(project_id)
+        if not current_value.strip():
+            return jsonify({
+                'success': False,
+                'error': 'No text provided to optimize',
+                'optimized': current_value
+            })
         
-        if field_name not in FIELD_AGENT_MAPPING:
-            return jsonify({'error': f'Unknown field: {field_name}'}), 400
-        
-        analysis_context = {
-            'console_logs': console_logs,
-            'metrics': metrics
-        }
-        
-        project_context = {
-            'genre': project.get('genre', 'trap'),
-            'bpm': project.get('bpm', 140),
-            'mood': project.get('mood', 'aggressive')
-        }
-        
-        result = llm_client.optimize_field(
+        result = field_optimizer.optimize_field(
             field_name=field_name,
-            current_value=current_value,
-            analysis_context=analysis_context,
-            project_context=project_context
+            text=current_value
         )
         
         return jsonify(result)
         
     except Exception as e:
         logger.error(f"Field optimization failed: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e), 'success': False}), 500
 
 
 @app.route('/api/run-full-analysis', methods=['POST'])
