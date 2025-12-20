@@ -1,0 +1,94 @@
+# APEX Engine Refactor Plan: Iteration 1
+
+**Objective:** Stabilize architecture, secure data, and decouple logic.
+**Priorities:**
+1. Decouple `app.py` into Flask Blueprints.
+2. Implement Atomic Saves & Secure Secrets.
+3. Separate LLM Prompts from Client Logic.
+
+---
+
+## Phase 1: Architecture Decoupling (The Monolith Split)
+
+### 1.1 Create Directory Structure
+Create the following directories and empty files:
+- `apex_engine/web/routes/__init__.py`
+- `apex_engine/web/routes/views.py`
+- `apex_engine/web/routes/api_project.py`
+- `apex_engine/web/routes/api_actions.py`
+
+### 1.2 Logic Migration
+
+**Action:** Move code from `apex_engine/web/app.py` to the new route files.
+
+#### A. `apex_engine/web/routes/views.py`
+* **Imports:** `flask`, `pathlib`, `core.project_manager`
+* **Routes to Move:**
+    * `/` (index)
+    * `/project/new`
+    * `/project/<id>` (workspace)
+    * `/simulated_output/<path:filename>`
+
+#### B. `apex_engine/web/routes/api_project.py`
+* **Imports:** `flask`, `core.project_manager`
+* **Routes to Move:**
+    * `/api/projects` (GET)
+    * `/api/project/<id>` (GET/PUT/DELETE)
+    * `/api/project/<id>/seed` (POST)
+    * `/api/field-help/<name>`
+    * `/api/field-context/<name>`
+
+#### C. `apex_engine/web/routes/api_actions.py`
+* **Imports:** `flask`, `core.llm_client`, `services.fal_client`, `core.orchestrator`
+* **Routes to Move:**
+    * `/api/project/<id>/generate-lyrics`
+    * `/api/project/<id>/iterate`
+    * `/api/project/<id>/approve`
+    * `/api/project/<id>/generate-audio`
+    * `/api/magic-fill`
+    * `/api/optimize-field`
+    * `/api/run-full-analysis`
+
+### 1.3 Rebuild `apex_engine/web/app.py`
+* **Action:** Wipe `app.py` and replace it with a clean factory pattern.
+* **Requirements:**
+    * Initialize `Flask`.
+    * Load configuration.
+    * Register blueprints from `web.routes`.
+    * **CRITICAL:** Do NOT include route logic here. Only setup code.
+
+---
+
+## Phase 2: Data Integrity & Security
+
+### 2.1 Atomic Writes in `apex_engine/src/core/project_manager.py`
+* **Target:** `_save_json(self, path, data)` method.
+* **Logic Change:**
+    1.  Create a backup copy of the existing file (e.g., `config.json.bak`).
+    2.  Write new data to a temporary file (e.g., `config.json.tmp`).
+    3.  Flush and sync the file to disk.
+    4.  Use `os.replace()` to atomically swap `.tmp` with `.json`.
+    5.  Wrap in `try/except` to log errors without crashing the app.
+
+### 2.2 Secure `SECRET_KEY` in `apex_engine/web/app.py`
+* **Action:** Modify the config loading section.
+* **Logic:**
+    * Check `os.environ.get("SECRET_KEY")`.
+    * If it is missing AND we are not in `debug` or `simulation` mode -> **Raise Exception** and abort startup.
+    * Remove the hardcoded default `'apex-dev-key-change-in-prod'`.
+
+---
+
+## Phase 3: Separation of Concerns (LLM Client)
+
+### 3.1 Create `apex_engine/src/core/prompts.py`
+* **Action:** Create a new file to hold all prompt constants.
+* **Content:**
+    * `SYSTEM_PROMPT_LYRICS = "..."`
+    * `MAGIC_FILL_SYSTEM_PROMPT = "..."`
+    * `OPTIMIZER_PROMPT_TEMPLATE = "..."`
+
+### 3.2 Refactor `apex_engine/src/core/llm_client.py`
+* **Action:**
+    1.  Import prompts from `core.prompts`.
+    2.  Replace all hardcoded string templates in methods like `generate_lyrics`, `magic_fill`, and `_optimize` with references to the constants in `core.prompts`.
