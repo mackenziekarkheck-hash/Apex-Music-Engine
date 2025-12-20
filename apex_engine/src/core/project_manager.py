@@ -14,6 +14,7 @@ Reference: Neo-Apex Architecture Documentation
 import os
 import json
 import shutil
+import tempfile
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from pathlib import Path
@@ -77,7 +78,7 @@ class ProjectManager:
         self._save_json(project_path / "config.json", config)
         
         if seed_text:
-            (project_path / "seed.txt").write_text(seed_text)
+            self._save_text(project_path / "seed.txt", seed_text)
         
         logger.info(f"Created project: {project_id}")
         return config
@@ -140,7 +141,7 @@ class ProjectManager:
     def save_seed(self, project_id: str, seed_text: str) -> None:
         """Save the seed/creative brief for a project."""
         project_path = self.base_dir / project_id
-        (project_path / "seed.txt").write_text(seed_text)
+        self._save_text(project_path / "seed.txt", seed_text)
         self._update_timestamp(project_id)
     
     def save_iteration(
@@ -164,7 +165,7 @@ class ProjectManager:
         iteration_dir = project_path / "iterations" / f"v{version}"
         iteration_dir.mkdir(parents=True, exist_ok=True)
         
-        (iteration_dir / "lyrics.txt").write_text(lyrics)
+        self._save_text(iteration_dir / "lyrics.txt", lyrics)
         
         self._save_json(iteration_dir / "scoring.json", {
             "version": version,
@@ -198,7 +199,7 @@ class ProjectManager:
             raise ValueError(f"Iteration v{version} not found")
         
         lyrics = (iteration_dir / "lyrics.txt").read_text()
-        (approved_dir / "final_lyrics.txt").write_text(lyrics)
+        self._save_text(approved_dir / "final_lyrics.txt", lyrics)
         
         self._save_json(approved_dir / "api_payload.json", {
             "approved_at": datetime.now().isoformat(),
@@ -233,7 +234,7 @@ class ProjectManager:
         approved_dir.mkdir(parents=True, exist_ok=True)
         
         if lyrics_text:
-            (approved_dir / "final_lyrics.txt").write_text(lyrics_text)
+            self._save_text(approved_dir / "final_lyrics.txt", lyrics_text)
         
         self._save_json(approved_dir / "api_payload.json", {
             "approved_at": datetime.now().isoformat(),
@@ -365,6 +366,27 @@ class ProjectManager:
             return json.load(f)
     
     def _save_json(self, path: Path, data: Dict[str, Any]) -> None:
-        """Save JSON file with pretty formatting."""
-        with open(path, 'w') as f:
-            json.dump(data, f, indent=2, default=str)
+        """Save JSON file atomically with write-to-temp-then-rename pattern."""
+        path = Path(path)
+        fd, tmp_path = tempfile.mkstemp(suffix='.tmp', dir=path.parent)
+        try:
+            with os.fdopen(fd, 'w') as f:
+                json.dump(data, f, indent=2, default=str)
+            os.replace(tmp_path, path)
+        except Exception:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            raise
+    
+    def _save_text(self, path: Path, text: str) -> None:
+        """Save text file atomically with write-to-temp-then-rename pattern."""
+        path = Path(path)
+        fd, tmp_path = tempfile.mkstemp(suffix='.tmp', dir=path.parent)
+        try:
+            with os.fdopen(fd, 'w') as f:
+                f.write(text)
+            os.replace(tmp_path, path)
+        except Exception:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            raise

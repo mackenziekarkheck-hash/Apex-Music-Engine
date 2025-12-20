@@ -34,7 +34,13 @@ def create_app(config=None):
                 template_folder='templates',
                 static_folder='static')
     
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'apex-dev-key-change-in-prod')
+    secret_key = os.environ.get('SECRET_KEY')
+    if not secret_key:
+        if os.environ.get('REPL_DEPLOYMENT') or os.environ.get('FLASK_ENV') == 'production':
+            raise RuntimeError("SECRET_KEY environment variable must be set in production")
+        secret_key = 'apex-dev-key-for-development-only'
+        logger.warning("Using development SECRET_KEY. Set SECRET_KEY env var for production.")
+    app.config['SECRET_KEY'] = secret_key
     
     if config:
         app.config.update(config)
