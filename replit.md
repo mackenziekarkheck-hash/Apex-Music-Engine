@@ -48,6 +48,17 @@ The system includes a Flask Web UI for project management, featuring a redesigne
 -   **Budget Enforcement**: Supports USD cost tracking and budget limits.
 -   **Tag Validation**: Efficient O(1) lookup using cached frozensets.
 
+### Code Architecture (Dec 2025 Refactor)
+-   **Flask Blueprints**: Routes split into modular blueprints:
+    - `views_bp`: HTML page rendering (index, new_project, workspace)
+    - `api_project_bp`: Project CRUD and field info endpoints
+    - `api_actions_bp`: Generation, analysis, and AI optimization endpoints
+    - `helpers.py`: Shared scoring and recommendation functions
+-   **Application Factory**: `create_app()` pattern in `apex_engine/web/app.py` for testability
+-   **Atomic File Saves**: `project_manager.py` uses write-to-temp-then-rename pattern via `tempfile.mkstemp` + `os.replace` for data integrity
+-   **Centralized Prompts**: All LLM system prompts defined in `apex_engine/config/prompts.py` for maintainability
+-   **Secure SECRET_KEY**: Production environments require `SECRET_KEY` env var; development uses fallback with warning
+
 ## External Dependencies
 
 -   **Sonauto API**: Primary audio generation service.
