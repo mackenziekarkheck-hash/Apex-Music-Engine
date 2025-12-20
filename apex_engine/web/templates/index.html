@@ -14,7 +14,7 @@
         </header>
         
         <nav class="actions">
-            <a href="{{ url_for('new_project') }}" class="btn btn-primary">+ New Project</a>
+            <a href="{{ url_for('views.new_project') }}" class="btn btn-primary">+ New Project</a>
         </nav>
         
         <main>
@@ -38,7 +38,7 @@
                             Created: {{ project.created_at[:10] }}
                         </div>
                         <div class="project-actions">
-                            <a href="{{ url_for('project_workspace', project_id=project.id) }}" class="btn btn-secondary">Open</a>
+                            <a href="{{ url_for('views.project_workspace', project_id=project.id) }}" class="btn btn-secondary">Open</a>
                         </div>
                     </div>
                     {% endfor %}
@@ -46,7 +46,7 @@
                 {% else %}
                 <div class="empty-state">
                     <p>No projects yet. Create your first song project to get started!</p>
-                    <a href="{{ url_for('new_project') }}" class="btn btn-primary">Create Project</a>
+                    <a href="{{ url_for('views.new_project') }}" class="btn btn-primary">Create Project</a>
                 </div>
                 {% endif %}
             </section>

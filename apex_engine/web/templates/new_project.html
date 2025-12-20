@@ -244,7 +244,7 @@
 <body>
     <div class="container">
         <header>
-            <a href="{{ url_for('index') }}" class="back-link">&larr; Back to Projects</a>
+            <a href="{{ url_for('views.index') }}" class="back-link">&larr; Back to Projects</a>
             <h1>Create New Project</h1>
         </header>
         
@@ -393,7 +393,7 @@ Automated underground"></textarea>
                 </div>
                 
                 <div class="form-actions">
-                    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+                    <a href="{{ url_for('views.index') }}" class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary">Create Project</button>
                 </div>
             </form>

@@ -435,7 +435,7 @@
 <body>
     <div class="container workspace">
         <header>
-            <a href="{{ url_for('index') }}" class="back-link">&larr; Projects</a>
+            <a href="{{ url_for('views.index') }}" class="back-link">&larr; Projects</a>
             <div class="project-title">
                 <h1>{{ project.name }}</h1>
                 <span class="status-badge {{ project.status }}">{{ project.status }}</span>
